@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+  <title>Nature Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <div class="grain"></div>
+
+  <aside class="side">
+    <div class="brand">Nature</div>
+    <div class="label">Instances</div>
+    <ul id="instances"></ul>
+    <button id="newInst" class="link">+ New instance</button>
+    <button id="accountBtn" class="account">
+      <span class="label">Account</span>
+      <span id="accountName">None</span>
+    </button>
+  </aside>
+
+  <header class="top">
+    <button class="icon" id="openData" title="Open launcher folder">
+      <svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/></svg>
+    </button>
+    <button class="icon" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section id="empty" class="hero">
+      <h1>Nature</h1>
+      <div class="rule"></div>
+      <div class="meta"><span>Minecraft launcher</span><span>Modrinth inside</span></div>
+      <p class="tagline">Set sail.<br>Create an instance to begin.</p>
+    </section>
+
+    <section id="view" hidden>
+      <h1 id="instName"></h1>
+      <div class="rule"></div>
+      <div class="meta">
+        <span id="instMeta"></span>
+        <span class="actions">
+          <button class="link" id="instFolder">Folder</button>
+          <button class="link danger" id="instDelete">Delete</button>
+          <button class="link launch" id="launchBtn">Launch →</button>
+        </span>
+      </div>
+      <div id="progress" class="progress" hidden><div></div><span class="label" id="progressLabel"></span></div>
+
+      <nav class="tabs" id="tabs">
+        <button data-tab="mods" class="on">Mods</button>
+        <button data-tab="resourcepacks">Resource packs</button>
+        <button data-tab="shaderpacks">Shaders</button>
+        <button data-tab="browse">Browse Modrinth</button>
+        <button data-tab="log">Log</button>
+      </nav>
+
+      <div class="panel" id="panelLocal">
+        <div class="toolbar">
+          <span id="localCount" class="label"></span>
+          <span id="localHint" class="hint"></span>
+          <span class="actions">
+            <button class="link" id="updateAll">Update all</button>
+            <button class="link" id="addFiles">Add files</button>
+            <button class="link" id="openKind">Open folder</button>
+          </span>
+        </div>
+        <ul id="localList" class="list"></ul>
+        <div class="drop">Drop files here to add them</div>
+      </div>
+
+      <div class="panel" id="panelBrowse" hidden>
+        <div class="toolbar">
+          <select id="mrKind">
+            <option value="mods">Mods</option>
+            <option value="resourcepacks">Resource packs</option>
+            <option value="shaderpacks">Shaders</option>
+          </select>
+          <input id="mrQuery" type="search" placeholder="Search Modrinth…" aria-label="Search Modrinth">
+        </div>
+        <div id="mrHint" class="hint"></div>
+        <ul id="mrList" class="cards"></ul>
+        <button id="mrMore" class="link more" hidden>Load more</button>
+      </div>
+
+      <div class="panel" id="panelLog" hidden>
+        <pre id="log"></pre>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <dialog id="dlgNew">
+    <form method="dialog" id="formNew">
+      <h2>New instance</h2>
+      <nav class="tabs" id="srcTabs">
+        <button type="button" data-src="version" class="on">Version</button>
+        <button type="button" data-src="modpack">Modrinth modpack</button>
+        <button type="button" data-src="mrpack">.mrpack file</button>
+        <button type="button" data-src="custom">Custom jar/json</button>
+      </nav>
+      <label>Name<input name="name" maxlength="40" placeholder="My Instance" autofocus></label>
+
+      <div class="src" data-src="version">
+        <label>Loader
+          <select name="loader">
+            <option value="fabric">Fabric</option><option value="quilt">Quilt</option>
+            <option value="forge">Forge</option><option value="neoforge">NeoForge</option>
+            <option value="vanilla">Vanilla</option>
+          </select>
+        </label>
+        <label>Minecraft version<select name="version"></select></label>
+        <label class="check"><input type="checkbox" name="snapshots"> Show snapshots &amp; old betas</label>
+      </div>
+
+      <div class="src" data-src="modpack" hidden>
+        <input id="mpQuery" type="search" placeholder="Search modpacks…" aria-label="Search modpacks">
+        <ul id="mpList" class="list picks"></ul>
+        <label>Pack version<select id="mpVersion"></select></label>
+      </div>
+
+      <div class="src" data-src="mrpack" hidden>
+        <label>Modpack file (.mrpack)<input type="file" id="mrpackFile" accept=".mrpack,.zip"></label>
+      </div>
+
+      <div class="src" data-src="custom" hidden>
+        <label>Version JSON<input type="file" id="customJson" accept=".json"></label>
+        <label>Client JAR (optional if the json inherits a version)<input type="file" id="customJar" accept=".jar"></label>
+      </div>
+
+      <p class="hint" id="newErr"></p>
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Create →</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgSettings">
+    <form method="dialog" id="formSettings">
+      <h2>Settings</h2>
+      <label>Java executable<input name="javaPath" placeholder="Automatic (downloads the right Java per version)"></label>
+      <label>Max memory (GB)<input name="memory" type="number" min="1" max="64" step="1"></label>
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgAccounts">
+    <form method="dialog">
+      <h2>Accounts</h2>
+      <ul id="accList" class="list"></ul>
+      <button type="button" id="msLogin" class="link launch">Sign in with Microsoft →</button>
+      <label>Offline username<span class="inline"><input id="offName" maxlength="16" placeholder="Steve"><button type="button" id="offAdd" class="link">Add</button></span></label>
+      <div class="row"><button value="close" class="link">Close</button></div>
+    </form>
+  </dialog>
+
+  <script src="bg.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

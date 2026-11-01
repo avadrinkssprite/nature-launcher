@@ -1,0 +1,39 @@
+{
+  "name": "nature-launcher",
+  "version": "0.2.0",
+  "description": "Minecraft launcher with Modrinth",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "author": "Nature Launcher",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "msmc": "^5.0.5"
+  },
+  "devDependencies": {
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "dev.nature.launcher",
+    "productName": "Nature Launcher",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "mc.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "dir",
+      "icon": "build/icon.png"
+    }
+  }
+}
