@@ -58,7 +58,7 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
 }
 .icon { -webkit-app-region: no-drag; opacity: .8; display: grid; }
 .icon:hover { opacity: 1; color: var(--warm); }
-.icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 
 /* main */
 main { position: fixed; top: var(--top); bottom: 0; left: var(--side); right: 0; padding: 4vh 6vw 28px 50px; overflow: hidden; }
