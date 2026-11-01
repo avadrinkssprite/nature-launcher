@@ -21,6 +21,7 @@ execFileSync(csc, [
   '/nologo', '/target:winexe', '/optimize+', `/out:${out}`, `/win32icon:${ico}`,
   '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Core.dll', '/r:Microsoft.CSharp.dll',
   '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll',
+  `/resource:${path.join(root, 'installer', 'bg.png')},bg.png`, // pixel-art background, rendered from src/bg.js
   path.join(root, 'installer', 'Setup.cs'),
 ], { stdio: 'inherit' });
 console.log('Built', out);

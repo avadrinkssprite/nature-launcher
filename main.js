@@ -350,7 +350,7 @@ async function checkForUpdate() {
   if (response !== 0) return;
   const setup = path.join(app.getPath('temp'), 'NatureLauncherSetup.exe');
   await core.download(`https://github.com/${REPO}/releases/latest/download/NatureLauncherSetup.exe`, setup);
-  require('child_process').spawn(setup, ['/update'], { detached: true, stdio: 'ignore' }).unref();
+  require('child_process').spawn(setup, ['/update', '/dir', path.dirname(process.execPath)], { detached: true, stdio: 'ignore' }).unref();
   app.quit();
 }
 
