@@ -4,6 +4,7 @@ const fs = require('fs');
 const { AdmZip } = require('./lib/deps');
 const { Auth } = require('./lib/deps');
 const createCore = require('./mc');
+const createRpc = require('./discord');
 
 // pinned so the packaged exe (named "Nature Launcher") keeps using the same data folder
 app.setPath('userData', path.join(app.getPath('appData'), 'nature-launcher'));
@@ -26,7 +27,7 @@ async function getJSON(url, body) {
 }
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const writeJSON = (f, o) => fs.writeFileSync(f, JSON.stringify(o, null, 2));
-const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, ...readJSON(CFG, {}) });
+const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, ...readJSON(CFG, {}) });
 const enc = s => safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s).toString('base64') : 'plain:' + s;
 const dec = s => s.startsWith('plain:') ? s.slice(6) : safeStorage.decryptString(Buffer.from(s, 'base64'));
 const send = (ch, ...a) => win?.webContents.send(ch, ...a);
@@ -258,10 +259,28 @@ const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.m
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();
-  for (const k of ['javaPath', 'memory', 'selected']) if (k in patch) c[k] = patch[k];
+  for (const k of ['javaPath', 'memory', 'selected', 'discordRpc']) if (k in patch) c[k] = patch[k];
   writeJSON(CFG, c);
+  updatePresence();
   return publicCfg();
 });
+
+// ---------- Discord Rich Presence ----------
+// shortcut: presence lives on the launcher's Discord connection, so it clears when the launcher closes even if games keep running
+const DISCORD_CLIENT_ID = '1566433771702714368'; // "Nature Launcher" app on the Discord developer portal (public, not a secret)
+const SITE = 'https://avadrinkssprite.github.io/nature-launcher/';
+const LOADER_NAMES = { vanilla: 'Vanilla', fabric: 'Fabric', quilt: 'Quilt', forge: 'Forge', neoforge: 'NeoForge', custom: 'Custom' };
+const rpc = createRpc(DISCORD_CLIENT_ID);
+function updatePresence() {
+  if (!cfg().discordRpc) return rpc.stop();
+  const games = [...running].filter(([, proc]) => proc); // null = still downloading/launching
+  const base = { assets: { large_image: SITE + 'icon.png', large_text: 'Nature Launcher' }, buttons: [{ label: 'Get Nature Launcher', url: SITE }] };
+  if (!games.length) return rpc.set({ ...base, details: 'In the launcher' });
+  const start = Math.min(...games.map(([, p]) => p.startedAt));
+  if (games.length > 1) return rpc.set({ ...base, details: `${games.length} instances running`, timestamps: { start } });
+  const inst = readJSON(path.join(INST, games[0][0], 'instance.json'), {});
+  rpc.set({ ...base, details: `Playing ${inst.name}`, state: `Minecraft ${inst.version} · ${LOADER_NAMES[inst.loader] || inst.loader}`, timestamps: { start } });
+}
 
 h('acc:ms', async () => {
   const xbox = await new Auth('select_account').launch('electron');
@@ -321,9 +340,11 @@ h('launch', async id => {
       inst, gameDir: instDir(id), auth, javaPath: c.javaPath || null, memory: c.memory, log,
       progress: (label, done, total) => send('progress', id, { label, done, total }),
     });
+    proc.startedAt = Date.now();
     running.set(id, proc);
+    updatePresence();
     let ended = false;
-    const end = code => { if (ended) return; ended = true; running.delete(id); send('closed', id, code); };
+    const end = code => { if (ended) return; ended = true; running.delete(id); updatePresence(); send('closed', id, code); };
     proc.on('error', e => { log('Failed to start Java: ' + e.message); end(-1); });
     proc.on('close', end);
     send('started', id);
@@ -367,6 +388,7 @@ app.whenReady().then(() => {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  updatePresence();
   win.webContents.once('did-finish-load', () => checkForUpdate().catch(e => console.error('Update check failed:', e.message)));
   // Modrinth links open in the real browser, not inside the app
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
