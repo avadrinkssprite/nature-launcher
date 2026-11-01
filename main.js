@@ -333,6 +333,27 @@ h('launch', async id => {
   }
 });
 
+// ---------- self-update ----------
+// version.txt is bundled into each build; a different ID on GitHub means a newer release exists
+const REPO = 'avadrinkssprite/nature-launcher';
+async function checkForUpdate() {
+  if (!app.isPackaged) return; // dev runs (npm start) never prompt
+  const local = fs.readFileSync(path.join(__dirname, 'version.txt'), 'utf8').trim();
+  const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/version.txt?t=${Date.now()}`, { headers: UA });
+  const remote = r.ok ? (await r.text()).trim() : '';
+  if (!/^[0-9a-f]{32}$/.test(remote) || remote === local) return;
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'info', buttons: ['Update now', 'Later'], defaultId: 0, cancelId: 1,
+    title: 'Update available', message: 'A new version of Nature Launcher is available.',
+    detail: 'The launcher will close and the installer will update it. Your instances and worlds are kept.',
+  });
+  if (response !== 0) return;
+  const setup = path.join(app.getPath('temp'), 'NatureLauncherSetup.exe');
+  await core.download(`https://github.com/${REPO}/releases/latest/download/NatureLauncherSetup.exe`, setup);
+  require('child_process').spawn(setup, ['/update'], { detached: true, stdio: 'ignore' }).unref();
+  app.quit();
+}
+
 // ---------- window ----------
 app.whenReady().then(() => {
   win = new BrowserWindow({
@@ -343,6 +364,7 @@ app.whenReady().then(() => {
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  win.webContents.once('did-finish-load', () => checkForUpdate().catch(e => console.error('Update check failed:', e.message)));
   // Modrinth links open in the real browser, not inside the app
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
 });

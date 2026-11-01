@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "build:installer": "node scripts/build-installer.js",
+    "release": "node scripts/release.js"
   },
   "author": "Nature Launcher",
   "license": "ISC",
@@ -28,6 +30,7 @@
       "main.js",
       "mc.js",
       "preload.js",
+      "version.txt",
       "src/**/*",
       "package.json"
     ],
