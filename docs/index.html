@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nature Launcher</title>
-  <meta name="description" content="A free Minecraft launcher for Windows with instances, Modrinth built in, modpacks and automatic updates.">
+  <meta name="description" content="A free Minecraft launcher for Windows and Linux with instances, Modrinth built in, modpacks and automatic updates.">
   <meta property="og:title" content="Nature Launcher">
-  <meta property="og:description" content="A free Minecraft launcher for Windows with instances, Modrinth built in, modpacks and automatic updates.">
+  <meta property="og:description" content="A free Minecraft launcher for Windows and Linux with instances, Modrinth built in, modpacks and automatic updates.">
   <meta property="og:image" content="https://avadrinkssprite.github.io/nature-launcher/screenshot.png">
   <link rel="icon" href="icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -97,6 +97,11 @@
     details[open] summary::after { content: '–'; }
     details p { margin: 0; padding: 0 24px 22px; color: var(--dim); max-width: 70ch; }
     code { font: 13px Consolas, monospace; background: rgba(238, 241, 248, .08); padding: 2px 6px; }
+    .linux { margin-top: 1px; background: var(--glass); backdrop-filter: blur(8px); border: 1px solid var(--line); padding: 22px 24px; }
+    .linux strong { color: var(--warm); }
+    .linux p { color: var(--dim); font-size: 15px; margin: 8px 0 14px; }
+    .linux pre { margin: 0; overflow-x: auto; background: rgba(6, 12, 28, .6); border: 1px solid var(--line); padding: 12px 14px; }
+    .linux pre code { background: none; padding: 0; white-space: pre; }
 
     .cta { text-align: center; padding-top: 120px; padding-bottom: 120px; }
     .cta h2 { font-size: clamp(48px, 8vw, 96px); }
@@ -128,13 +133,13 @@
   <header class="hero" id="top">
     <h1>Nature</h1>
     <div class="rule"></div>
-    <div class="meta caps shadowed"><span>Minecraft launcher</span><span>Free · Windows 10 &amp; 11</span></div>
+    <div class="meta caps shadowed"><span>Minecraft launcher</span><span>Free · Windows &amp; Linux</span></div>
     <p class="lede shadowed">Every version, every loader, one quiet harbour.</p>
     <div class="actions">
       <a class="btn big caps" href="https://github.com/avadrinkssprite/nature-launcher/releases/latest/download/NatureLauncherSetup.exe">Download for Windows →</a>
       <a class="btn big caps ghost" href="#features">What it does</a>
     </div>
-    <p class="note shadowed">A small installer that fetches the latest launcher. Updates install themselves.</p>
+    <p class="note shadowed">A small installer that fetches the latest launcher. Updates install themselves. On Linux? <a href="#install">One command</a>.</p>
   </header>
 
   <section>
@@ -169,6 +174,11 @@
       <li><strong>Run it</strong><span>If Windows shows "Windows protected your PC", click <em>More info</em>, then <em>Run anyway</em>. The installer isn't code-signed yet.</span></li>
       <li><strong>Choose a folder and shortcuts</strong><span>Pick where to install and whether you want Start menu and Desktop shortcuts, then press Install.</span></li>
     </ol>
+    <div class="linux">
+      <strong class="caps">On Linux</strong>
+      <p>Paste this into a terminal. It installs for your user only (no sudo) and adds Nature Launcher to your app menu. Run it again any time to update; the launcher also updates itself.</p>
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/avadrinkssprite/nature-launcher/main/install.sh | bash</code></pre>
+    </div>
   </section>
 
   <section id="updates">
@@ -184,7 +194,7 @@
     <details><summary>Where are my worlds and mods stored?</summary><p>In <code>%APPDATA%\nature-launcher</code>. Each instance is a folder under <code>instances</code> with its own <code>saves</code>, <code>mods</code>, <code>resourcepacks</code> and <code>shaderpacks</code>. The Folder button in the launcher opens it for you.</p></details>
     <details><summary>Why does Windows warn me about the installer?</summary><p>Windows SmartScreen warns about apps that aren't code-signed, which costs money every year. Click <em>More info</em>, then <em>Run anyway</em>. You can read exactly what the installer does in <code>installer/Setup.cs</code> on GitHub.</p></details>
     <details><summary>How do I uninstall it?</summary><p>Open Windows Settings → Apps → Installed apps, find Nature Launcher and choose Uninstall. Your instances and worlds stay in <code>%APPDATA%\nature-launcher</code> unless you delete that folder yourself.</p></details>
-    <details><summary>Does it work on Mac or Linux?</summary><p>Not yet. Nature Launcher is Windows only for now.</p></details>
+    <details><summary>Does it work on Mac or Linux?</summary><p>Linux, yes: x64 and ARM64, using the one-line install above. Your instances live in <code>~/.config/nature-launcher</code>. To remove it, run the same command with <code>bash -s -- --uninstall</code> at the end. Mac isn't supported yet.</p></details>
   </section>
 
   <section class="cta">

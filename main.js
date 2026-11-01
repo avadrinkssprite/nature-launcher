@@ -372,9 +372,17 @@ async function checkForUpdate() {
     detail: 'The launcher will close and the installer will update it. Your instances and worlds are kept.',
   });
   if (response !== 0) return;
-  const setup = path.join(app.getPath('temp'), 'NatureLauncherSetup.exe');
-  await core.download(`https://github.com/${REPO}/releases/latest/download/NatureLauncherSetup.exe`, setup);
-  require('child_process').spawn(setup, ['/update', '/dir', path.dirname(process.execPath)], { detached: true, stdio: 'ignore' }).unref();
+  const { spawn } = require('child_process');
+  if (process.platform === 'linux') {
+    // Linux installs come from install.sh in the repo; re-running it is the update
+    const sh = path.join(app.getPath('temp'), 'nature-launcher-install.sh');
+    await core.download(`https://raw.githubusercontent.com/${REPO}/main/install.sh?t=${Date.now()}`, sh);
+    spawn('bash', [sh, '--update'], { detached: true, stdio: 'ignore' }).unref();
+  } else {
+    const setup = path.join(app.getPath('temp'), 'NatureLauncherSetup.exe');
+    await core.download(`https://github.com/${REPO}/releases/latest/download/NatureLauncherSetup.exe`, setup);
+    spawn(setup, ['/update', '/dir', path.dirname(process.execPath)], { detached: true, stdio: 'ignore' }).unref();
+  }
   app.quit();
 }
 

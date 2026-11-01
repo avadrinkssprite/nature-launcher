@@ -24,7 +24,13 @@
 
 ## Installing
 
-Download **NatureLauncherSetup.exe** from [Releases](https://github.com/avadrinkssprite/nature-launcher/releases/latest) and run it. You can choose the install folder and whether to add Start menu and Desktop shortcuts.
+**Windows:** download **NatureLauncherSetup.exe** from [Releases](https://github.com/avadrinkssprite/nature-launcher/releases/latest) and run it. You can choose the install folder and whether to add Start menu and Desktop shortcuts.
+
+**Linux** (x64 / ARM64): installs for your user only and adds an app menu entry. Run it again to update; add `-s -- --uninstall` after `bash` to remove it.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/avadrinkssprite/nature-launcher/main/install.sh | bash
+```
 
 ## How updates work
 
