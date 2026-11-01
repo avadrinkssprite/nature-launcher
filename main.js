@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { AdmZip } = require('./lib/deps');
@@ -344,12 +344,13 @@ h('launch', async id => {
     running.set(id, proc);
     updatePresence();
     let ended = false;
-    const end = code => { if (ended) return; ended = true; running.delete(id); updatePresence(); send('closed', id, code); };
+    const end = code => { if (ended) return; ended = true; running.delete(id); updatePresence(); send('closed', id, code); quitIfIdle(); };
     proc.on('error', e => { log('Failed to start Java: ' + e.message); end(-1); });
     proc.on('close', end);
     send('started', id);
   } catch (e) {
     running.delete(id);
+    quitIfIdle();
     throw e;
   }
 });
@@ -378,6 +379,16 @@ async function checkForUpdate() {
 }
 
 // ---------- window ----------
+// Closing the window while a game runs only hides it, so Discord presence and the game log keep going.
+// The hidden launcher quits by itself once the last game exits.
+let quitting = false;
+app.on('before-quit', () => { quitting = true; });
+function quitIfIdle() { if (!running.size && win && !win.isVisible()) app.quit(); }
+
+// opening the launcher again shows the existing (maybe hidden) window instead of a second copy
+if (!app.requestSingleInstanceLock()) app.exit(0);
+app.on('second-instance', () => { if (win) { win.show(); win.focus(); } });
+
 app.whenReady().then(() => {
   win = new BrowserWindow({
     width: 1280, height: 780, minWidth: 960, minHeight: 600,
@@ -389,6 +400,16 @@ app.whenReady().then(() => {
   });
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
   updatePresence();
+  let told = false;
+  win.on('close', e => {
+    if (quitting || !running.size) return;
+    e.preventDefault();
+    win.hide();
+    if (!told && Notification.isSupported()) {
+      told = true;
+      new Notification({ title: 'Nature Launcher', body: 'Still running in the background while your game is open. It closes by itself when you stop playing.', icon: path.join(__dirname, 'build', 'icon.png') }).show();
+    }
+  });
   win.webContents.once('did-finish-load', () => checkForUpdate().catch(e => console.error('Update check failed:', e.message)));
   // Modrinth links open in the real browser, not inside the app
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
