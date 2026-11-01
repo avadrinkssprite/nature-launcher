@@ -1,4 +1,5 @@
 const { invoke, on, pathOf } = window.api;
+if (window.api.platform === 'linux') document.getElementById('discordOpt').hidden = true; // Discord presence is Windows-only
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const fmtSize = b => b == null ? 'folder' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';

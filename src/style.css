@@ -147,6 +147,7 @@ dialog form { display: grid; gap: 14px; }
 dialog label { display: grid; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 dialog label input, dialog label select { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 14px; color: var(--ink); }
 dialog .check { display: flex; align-items: center; gap: 8px; }
+dialog .check[hidden] { display: none; }
 dialog .row { display: flex; justify-content: flex-end; gap: 22px; margin-top: 8px; }
 dialog .inline { display: flex; gap: 12px; align-items: center; }
 dialog .inline input { flex: 1; }
