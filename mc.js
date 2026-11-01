@@ -386,8 +386,10 @@ module.exports = function createCore(ROOT) {
 
     const args = [`-Xmx${memory}G`, '-Xms512M', ...jvm.map(sub), v.mainClass, ...game.map(sub)];
     log(`Launching ${id} with ${javaExe}`);
-    // detached: Electron kills attached children when it quits; the game should outlive the launcher
-    const proc = spawn(javaExe, args, { cwd: gameDir, windowsHide: true, detached: true });
+    // detached: Electron kills attached children when it quits; the game should outlive the launcher.
+    // No windowsHide: LWJGL 2 (MC <= 1.12) opens its window with SW_SHOWDEFAULT, which would inherit SW_HIDE.
+    // javaw.exe has no console, so there is nothing to hide anyway.
+    const proc = spawn(javaExe, args, { cwd: gameDir, detached: true });
     const parse = logParser(log);
     proc.stdout.on('data', d => parse(String(d)));
     proc.stderr.on('data', d => log(String(d).trimEnd()));
