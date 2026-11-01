@@ -1,5 +1,5 @@
-// Nature Launcher Setup: a bootstrapper that always installs the latest build from GitHub Releases,
-// so this exe never needs to change when the launcher updates.
+// Nature Launcher Setup: installs the launcher straight from the GitHub repo's main branch
+// (plus the Electron runtime it pins), so this exe never needs to change when the launcher updates.
 // Build: npm run build:installer (uses the C# 5 compiler that ships with Windows)
 // Args: /update (no questions, relaunch when done)  /dir <folder> (install folder for /update)  /uninstall
 using System;
@@ -22,7 +22,9 @@ using Microsoft.Win32;
 static class Setup
 {
     public const string Repo = "avadrinkssprite/nature-launcher";
-    public const string ZipUrl = "https://github.com/" + Repo + "/releases/latest/download/NatureLauncher-win-x64.zip";
+    // app code comes straight from the repo; the Electron runtime from Electron's official release
+    public const string RepoZip = "https://github.com/" + Repo + "/archive/refs/heads/main.zip";
+    public const string ElectronZip = "https://github.com/electron/electron/releases/download/v{0}/electron-v{0}-win32-x64.zip";
     public const string AppName = "Nature Launcher";
     public const string ExeName = "Nature Launcher.exe";
     public const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\NatureLauncher";
@@ -90,8 +92,39 @@ static class Setup
         dynamic lnk = shell.CreateShortcut(lnkPath);
         lnk.TargetPath = Exe;
         lnk.WorkingDirectory = Dir;
-        lnk.IconLocation = Exe + ",0";
+        lnk.IconLocation = Path.Combine(Dir, "Setup.exe") + ",0"; // the exe is stock Electron; Setup.exe carries our icon
         lnk.Save();
+    }
+
+    static void Download(string url, string file, Action<string, int> report, string label, int from, int to)
+    {
+        using (var wc = new WebClient())
+        {
+            wc.Headers.Add("User-Agent", "nature-launcher-setup");
+            wc.DownloadProgressChanged += (s, e) => report(label + "  " + (e.BytesReceived / 1048576) + " MB", from + e.ProgressPercentage * (to - from) / 100);
+            wc.DownloadFileTaskAsync(new Uri(url), file).Wait();
+        }
+    }
+
+    // stripTop: GitHub archives wrap everything in a "<repo>-main/" folder
+    static void Extract(string zip, string dest, bool stripTop, Action<string, int> report, string label, int from, int to)
+    {
+        string root = Path.GetFullPath(dest) + Path.DirectorySeparatorChar;
+        using (var archive = ZipFile.OpenRead(zip))
+        {
+            int i = 0, n = archive.Entries.Count;
+            foreach (var e in archive.Entries)
+            {
+                report(label, from + (to - from) * ++i / n);
+                string name = e.FullName.Replace('\\', '/');
+                if (stripTop) { int s = name.IndexOf('/'); name = s < 0 ? "" : name.Substring(s + 1); }
+                if (name == "" || name.EndsWith("/")) continue;
+                string target = Path.GetFullPath(Path.Combine(dest, name));
+                if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new Exception("Unsafe path in download: " + e.FullName);
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                e.ExtractToFile(target, true);
+            }
+        }
     }
 
     // runs on a worker thread. startMenu/desktop null = keep whatever shortcuts exist (update mode)
@@ -109,45 +142,56 @@ static class Setup
         catch (UnauthorizedAccessException) { throw new Exception("No permission to install in " + parent + ". Pick another folder."); }
 
         string tmp = Path.Combine(Path.GetTempPath(), "NatureLauncher-" + Guid.NewGuid().ToString("N"));
-        string staging = Dir + ".new"; // beside the target so the final move never crosses drives
+        // staged beside the target so the final moves never cross drives
+        string staging = Dir + ".new", appNew = Path.Combine(Dir, "resources", "app.new");
         Directory.CreateDirectory(tmp);
         try
         {
-            string zip = Path.Combine(tmp, "app.zip");
-            using (var wc = new WebClient())
+            // 1. app code: the repo's main branch (small, every push is an update)
+            string repoZip = Path.Combine(tmp, "repo.zip");
+            Download(RepoZip, repoZip, report, "Downloading Nature Launcher…", 0, 10);
+            string app = Path.Combine(tmp, "app");
+            Extract(repoZip, app, true, report, "Unpacking…", 10, 15);
+            if (!File.Exists(Path.Combine(app, "main.js"))) throw new Exception("The download did not contain the launcher.");
+
+            // 2. Electron runtime: only when missing or the repo pins a different version
+            var m = System.Text.RegularExpressions.Regex.Match(File.ReadAllText(Path.Combine(app, "package-lock.json")),
+                "\"node_modules/electron\":\\s*\\{\\s*\"version\":\\s*\"([^\"]+)\"");
+            if (!m.Success) throw new Exception("Could not find the Electron version in package-lock.json");
+            string electron = m.Groups[1].Value;
+            string verFile = Path.Combine(Dir, "version");
+            bool needRuntime = !File.Exists(Exe) || !File.Exists(verFile) || File.ReadAllText(verFile).Trim() != electron;
+
+            if (needRuntime)
             {
-                wc.Headers.Add("User-Agent", "nature-launcher-setup");
-                wc.DownloadProgressChanged += (s, e) => report("Downloading…  " + (e.BytesReceived / 1048576) + " MB", e.ProgressPercentage * 80 / 100);
-                wc.DownloadFileTaskAsync(new Uri(ZipUrl), zip).Wait();
-            }
+                string ez = Path.Combine(tmp, "electron.zip");
+                Download(string.Format(ElectronZip, electron), ez, report, "Downloading runtime (Electron " + electron + ")…", 15, 85);
+                DeleteDir(staging);
+                Extract(ez, staging, false, report, "Extracting runtime…", 85, 93);
+                File.Move(Path.Combine(staging, "electron.exe"), Path.Combine(staging, ExeName));
+                File.Delete(Path.Combine(staging, "resources", "default_app.asar"));
+                CopyDir(app, Path.Combine(staging, "resources", "app"));
 
-            report("Extracting…", 80);
-            DeleteDir(staging);
-            using (var archive = ZipFile.OpenRead(zip))
+                report("Closing Nature Launcher…", 94);
+                CloseLauncher();
+                // old files are removed so nothing stale is left behind.
+                // Instances and settings live in %APPDATA%\nature-launcher and are never touched.
+                report("Installing…", 95);
+                DeleteDir(Dir);
+                Directory.Move(staging, Dir);
+            }
+            else
             {
-                int i = 0, n = archive.Entries.Count;
-                string root = Path.GetFullPath(staging) + Path.DirectorySeparatorChar;
-                foreach (var e in archive.Entries)
-                {
-                    string dest = Path.GetFullPath(Path.Combine(staging, e.FullName));
-                    if (!dest.StartsWith(root, StringComparison.OrdinalIgnoreCase) && dest + Path.DirectorySeparatorChar != root)
-                        throw new Exception("Unsafe path in download: " + e.FullName);
-                    if (e.FullName.EndsWith("/") || e.FullName.EndsWith("\\")) { Directory.CreateDirectory(dest); continue; }
-                    Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                    e.ExtractToFile(dest, true);
-                    report("Extracting…", 80 + 15 * ++i / n);
-                }
+                DeleteDir(appNew);
+                CopyDir(app, appNew);
+                report("Closing Nature Launcher…", 90);
+                CloseLauncher();
+                report("Installing…", 94);
+                string res = Path.Combine(Dir, "resources");
+                foreach (var asar in new[] { "app.asar", "default_app.asar" }) File.Delete(Path.Combine(res, asar)); // either would win over resources\app
+                DeleteDir(Path.Combine(res, "app"));
+                Directory.Move(appNew, Path.Combine(res, "app"));
             }
-            if (!File.Exists(Path.Combine(staging, ExeName))) throw new Exception("The download did not contain " + ExeName);
-
-            report("Closing Nature Launcher…", 95);
-            CloseLauncher();
-
-            // old files are removed so nothing stale is left behind.
-            // Instances and settings live in %APPDATA%\nature-launcher and are never touched.
-            report("Installing…", 96);
-            DeleteDir(Dir);
-            Directory.Move(staging, Dir);
             File.Copy(Application.ExecutablePath, Path.Combine(Dir, "Setup.exe"), true);
 
             report("Creating shortcuts…", 98);
@@ -157,7 +201,7 @@ static class Setup
             using (var k = Registry.CurrentUser.CreateSubKey(UninstallKey))
             {
                 k.SetValue("DisplayName", AppName);
-                k.SetValue("DisplayIcon", Exe);
+                k.SetValue("DisplayIcon", Path.Combine(Dir, "Setup.exe"));
                 k.SetValue("Publisher", "Nature Launcher");
                 k.SetValue("InstallLocation", Dir);
                 k.SetValue("UninstallString", "\"" + Path.Combine(Dir, "Setup.exe") + "\" /uninstall");
@@ -170,7 +214,15 @@ static class Setup
         {
             try { Directory.Delete(tmp, true); } catch { }
             try { if (Directory.Exists(staging)) Directory.Delete(staging, true); } catch { }
+            try { if (Directory.Exists(appNew)) Directory.Delete(appNew, true); } catch { }
         }
+    }
+
+    static void CopyDir(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (var f in Directory.GetFiles(from)) File.Copy(f, Path.Combine(to, Path.GetFileName(f)), true);
+        foreach (var d in Directory.GetDirectories(from)) CopyDir(d, Path.Combine(to, Path.GetFileName(d)));
     }
 
     static int Uninstall()

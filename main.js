@@ -1,8 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const AdmZip = require('adm-zip');
-const { Auth } = require('msmc');
+const { AdmZip } = require('./lib/deps');
+const { Auth } = require('./lib/deps');
 const createCore = require('./mc');
 
 // pinned so the packaged exe (named "Nature Launcher") keeps using the same data folder
@@ -334,7 +334,9 @@ h('launch', async id => {
 });
 
 // ---------- self-update ----------
-// version.txt is bundled into each build; a different ID on GitHub means a newer release exists
+// The installer copies the repo's main branch into resources/app, version.txt included.
+// A different ID on GitHub means newer code was pushed; the installer then pulls it.
+// isPackaged is false under `npm start` (electron.exe), true for the installed "Nature Launcher.exe".
 const REPO = 'avadrinkssprite/nature-launcher';
 async function checkForUpdate() {
   if (!app.isPackaged) return; // dev runs (npm start) never prompt
@@ -359,6 +361,7 @@ app.whenReady().then(() => {
   win = new BrowserWindow({
     width: 1280, height: 780, minWidth: 960, minHeight: 600,
     backgroundColor: '#1a2f5c',
+    icon: path.join(__dirname, 'build', 'icon.png'), // the installed exe is stock Electron, so set the taskbar icon here
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#00000000', symbolColor: '#e8ecf6', height: 44 },
     webPreferences: { preload: path.join(__dirname, 'preload.js') },

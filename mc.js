@@ -5,7 +5,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
-const AdmZip = require('adm-zip');
+const { AdmZip } = require('./lib/deps');
 
 const UA = { 'User-Agent': 'nature-launcher/0.2.0' };
 const MANIFEST = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json';
