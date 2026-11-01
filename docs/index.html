@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nature Launcher</title>
+  <meta name="description" content="A free Minecraft launcher for Windows with instances, Modrinth built in, modpacks and automatic updates.">
+  <meta property="og:title" content="Nature Launcher">
+  <meta property="og:description" content="A free Minecraft launcher for Windows with instances, Modrinth built in, modpacks and automatic updates.">
+  <meta property="og:image" content="https://avadrinkssprite.github.io/nature-launcher/screenshot.png">
+  <link rel="icon" href="icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    :root {
+      --ink: #eef1f8;
+      --dim: rgba(238, 241, 248, .66);
+      --line: rgba(238, 241, 248, .26);
+      --glass: rgba(12, 22, 48, .62);
+      --warm: #ffcf9e;
+      --serif: 'Instrument Serif', Georgia, serif;
+      --sans: 'Archivo', 'Segoe UI', sans-serif;
+      --gutter: clamp(16px, 5vw, 64px);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body { margin: 0; background: #13244a; color: var(--ink); font: 16px/1.6 var(--sans); overflow-x: hidden; }
+    a { color: inherit; }
+    :focus-visible { outline: 1px solid var(--warm); outline-offset: 4px; }
+
+    /* cover keeps pixels square on narrow phones, where bg.js clamps the canvas to 200px wide */
+    #bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; z-index: -3; }
+    /* deepens the ocean as you scroll so the text below the hero stays readable */
+    .shade { position: fixed; inset: 0; z-index: -2; pointer-events: none; background: linear-gradient(to bottom, rgba(10, 18, 40, .1), rgba(10, 18, 40, .45) 70%, rgba(10, 18, 40, .7)); }
+    .grain {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .16; mix-blend-mode: overlay;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .caps { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
+    .shadowed { text-shadow: 0 1px 2px rgba(8, 14, 32, .9), 0 0 18px rgba(8, 14, 32, .55); }
+
+    nav {
+      position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 28px;
+      padding: 18px var(--gutter); background: linear-gradient(to bottom, rgba(12, 22, 48, .7), transparent);
+    }
+    nav .brand { font: 22px var(--serif); text-decoration: none; margin-right: auto; display: flex; align-items: center; gap: 10px; }
+    nav .brand img { width: 26px; height: 26px; image-rendering: pixelated; }
+    nav a.caps { text-decoration: none; color: var(--dim); }
+    nav a.caps:hover { color: var(--ink); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--warm);
+      padding: 12px 20px; border: 1px solid rgba(255, 207, 158, .6); background: rgba(12, 22, 48, .35);
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: rgba(255, 207, 158, .12); border-color: var(--warm); }
+    .btn.big { padding: 16px 26px; font-size: 12px; }
+    .btn.ghost { color: var(--ink); border-color: var(--line); }
+    nav .btn { padding: 9px 16px; }
+
+    .hero { min-height: calc(100vh - 70px); display: flex; flex-direction: column; justify-content: flex-end; padding: 0 var(--gutter) 10vh; max-width: 1200px; }
+    .hero h1 { font: 400 clamp(72px, 15vw, 190px)/.9 var(--serif); margin: 0 0 22px; letter-spacing: -.02em; text-shadow: 0 2px 40px rgba(8, 14, 32, .4); }
+    .rule { height: 1px; background: var(--line); }
+    .meta { display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; }
+    .hero .lede { font: italic clamp(28px, 4vw, 44px)/1.15 var(--serif); margin: 44px 0 30px; max-width: 18ch; }
+    .hero .actions { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .hero .note { color: var(--dim); font-size: 13px; margin-top: 14px; }
+
+    section { padding: 90px var(--gutter); max-width: 1200px; margin: 0 auto; }
+    h2 { font: 400 clamp(40px, 6vw, 64px)/1 var(--serif); margin: 0 0 14px; }
+    .kicker { color: var(--warm); margin-bottom: 14px; display: block; }
+    .intro { color: var(--dim); max-width: 60ch; margin: 0 0 40px; font-size: 17px; }
+    h2, .intro, .kicker { text-shadow: 0 1px 2px rgba(8, 14, 32, .9), 0 0 18px rgba(8, 14, 32, .6); }
+
+    .shot { margin: 0; border: 1px solid var(--line); background: var(--glass); padding: 10px; box-shadow: 0 30px 80px rgba(4, 8, 20, .5); }
+    .shot img { display: block; width: 100%; height: auto; }
+    .shot figcaption { color: var(--dim); font-size: 13px; padding: 10px 4px 2px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .card { background: var(--glass); backdrop-filter: blur(8px); padding: 26px 24px 28px; }
+    .card h3 { font: 400 26px/1.1 var(--serif); margin: 0 0 10px; }
+    .card p { margin: 0; color: var(--dim); font-size: 15px; }
+    .card .n { color: var(--warm); display: block; margin-bottom: 18px; }
+
+    .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .steps li { counter-increment: s; background: var(--glass); backdrop-filter: blur(8px); padding: 22px 24px 22px 84px; position: relative; }
+    .steps li::before { content: counter(s, decimal-leading-zero); position: absolute; left: 24px; top: 18px; font: 34px var(--serif); color: var(--warm); }
+    .steps strong { font-weight: 600; display: block; margin-bottom: 2px; }
+    .steps span { color: var(--dim); font-size: 15px; }
+
+    details { border-bottom: 1px solid var(--line); background: var(--glass); backdrop-filter: blur(8px); }
+    details:first-of-type { border-top: 1px solid var(--line); }
+    summary { cursor: pointer; padding: 20px 24px; font: 24px var(--serif); list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: '+'; color: var(--warm); font-family: var(--sans); }
+    details[open] summary::after { content: '–'; }
+    details p { margin: 0; padding: 0 24px 22px; color: var(--dim); max-width: 70ch; }
+    code { font: 13px Consolas, monospace; background: rgba(238, 241, 248, .08); padding: 2px 6px; }
+
+    .cta { text-align: center; padding-top: 120px; padding-bottom: 120px; }
+    .cta h2 { font-size: clamp(48px, 8vw, 96px); }
+    .cta .btn { margin-top: 26px; }
+
+    footer { border-top: 1px solid var(--line); padding: 28px var(--gutter) 40px; display: flex; flex-wrap: wrap; gap: 12px 28px; justify-content: space-between; color: var(--dim); font-size: 13px; background: rgba(10, 18, 40, .6); }
+
+    @media (max-width: 640px) {
+      nav { gap: 16px; }
+      nav a.caps { display: none; }
+      .steps li { padding-left: 24px; padding-top: 64px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="shade"></div>
+  <div class="grain"></div>
+
+  <nav>
+    <a class="brand shadowed" href="#top"><img src="icon.png" alt="">Nature Launcher</a>
+    <a class="caps shadowed" href="#features">Features</a>
+    <a class="caps shadowed" href="#install">Install</a>
+    <a class="caps shadowed" href="#faq">FAQ</a>
+    <a class="caps shadowed" href="https://github.com/avadrinkssprite/nature-launcher">GitHub</a>
+    <a class="btn caps" href="https://github.com/avadrinkssprite/nature-launcher/releases/latest/download/NatureLauncherSetup.exe">Download</a>
+  </nav>
+
+  <header class="hero" id="top">
+    <h1>Nature</h1>
+    <div class="rule"></div>
+    <div class="meta caps shadowed"><span>Minecraft launcher</span><span>Free · Windows 10 &amp; 11</span></div>
+    <p class="lede shadowed">Every version, every loader, one quiet harbour.</p>
+    <div class="actions">
+      <a class="btn big caps" href="https://github.com/avadrinkssprite/nature-launcher/releases/latest/download/NatureLauncherSetup.exe">Download for Windows →</a>
+      <a class="btn big caps ghost" href="#features">What it does</a>
+    </div>
+    <p class="note shadowed">A small installer that fetches the latest launcher. Updates install themselves.</p>
+  </header>
+
+  <section>
+    <figure class="shot">
+      <img src="screenshot.png" width="1280" height="760" alt="The Nature Launcher home screen: a serif 'Nature' title over a pixel-art sunset ocean with a lighthouse, with the instance list on the left.">
+      <figcaption>The launcher's background is the same live pixel-art ocean you're looking at now.</figcaption>
+    </figure>
+  </section>
+
+  <section id="features">
+    <span class="kicker caps">Features</span>
+    <h2>Everything in one place</h2>
+    <p class="intro">Make separate instances for each way you play, then manage mods, packs and shaders without ever opening a file explorer.</p>
+    <div class="grid">
+      <div class="card"><span class="n caps">Instances</span><h3>Any loader, any version</h3><p>Vanilla, Fabric, Quilt, Forge and NeoForge, for every release back to 1.8.9 and beyond. Each instance keeps its own worlds, mods and settings.</p></div>
+      <div class="card"><span class="n caps">Modrinth</span><h3>Browse and install inside</h3><p>Search mods, resource packs and shaders filtered to your instance's version and loader. Required dependencies install automatically.</p></div>
+      <div class="card"><span class="n caps">Modpacks</span><h3>One click packs</h3><p>Pick any Modrinth modpack and version, or import a <code>.mrpack</code> file, and get a ready-to-play instance.</p></div>
+      <div class="card"><span class="n caps">Content</span><h3>Manage what you have</h3><p>Turn mods, resource packs and shaders on or off, delete them, or drag files straight into the window.</p></div>
+      <div class="card"><span class="n caps">Update all</span><h3>Stay current</h3><p>One button checks every mod, resource pack and shader against Modrinth, even ones you added by hand.</p></div>
+      <div class="card"><span class="n caps">Java</span><h3>No Java hunting</h3><p>The right Java runtime downloads for each version: Java 8 for 1.8.9, Java 21 for modern releases, and so on.</p></div>
+      <div class="card"><span class="n caps">Custom</span><h3>Bring your own version</h3><p>Point it at a version <code>.json</code> and <code>.jar</code> to play clients and versions that aren't on the official list.</p></div>
+      <div class="card"><span class="n caps">Accounts</span><h3>Microsoft sign-in</h3><p>Sign in with your Microsoft account, or add an offline name for testing and singleplayer.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <span class="kicker caps">Install</span>
+    <h2>Three steps</h2>
+    <p class="intro">No admin rights needed. Everything installs for your Windows account only.</p>
+    <ol class="steps">
+      <li><strong>Download the installer</strong><span>Get <a href="https://github.com/avadrinkssprite/nature-launcher/releases/latest/download/NatureLauncherSetup.exe">NatureLauncherSetup.exe</a>. It's tiny because it downloads the launcher itself.</span></li>
+      <li><strong>Run it</strong><span>If Windows shows "Windows protected your PC", click <em>More info</em>, then <em>Run anyway</em>. The installer isn't code-signed yet.</span></li>
+      <li><strong>Choose a folder and shortcuts</strong><span>Pick where to install and whether you want Start menu and Desktop shortcuts, then press Install.</span></li>
+    </ol>
+  </section>
+
+  <section id="updates">
+    <span class="kicker caps">Updates</span>
+    <h2>It keeps itself fresh</h2>
+    <p class="intro">When a new version is out, the launcher asks if you want it. Say yes and it closes, updates in a few seconds and opens again. Your instances, worlds and settings are never touched.</p>
+  </section>
+
+  <section id="faq">
+    <span class="kicker caps">FAQ</span>
+    <h2>Questions</h2>
+    <details><summary>Is it free?</summary><p>Yes. Nature Launcher is free and its code is on <a href="https://github.com/avadrinkssprite/nature-launcher">GitHub</a>. You still need to own Minecraft to play online.</p></details>
+    <details><summary>Where are my worlds and mods stored?</summary><p>In <code>%APPDATA%\nature-launcher</code>. Each instance is a folder under <code>instances</code> with its own <code>saves</code>, <code>mods</code>, <code>resourcepacks</code> and <code>shaderpacks</code>. The Folder button in the launcher opens it for you.</p></details>
+    <details><summary>Why does Windows warn me about the installer?</summary><p>Windows SmartScreen warns about apps that aren't code-signed, which costs money every year. Click <em>More info</em>, then <em>Run anyway</em>. You can read exactly what the installer does in <code>installer/Setup.cs</code> on GitHub.</p></details>
+    <details><summary>How do I uninstall it?</summary><p>Open Windows Settings → Apps → Installed apps, find Nature Launcher and choose Uninstall. Your instances and worlds stay in <code>%APPDATA%\nature-launcher</code> unless you delete that folder yourself.</p></details>
+    <details><summary>Does it work on Mac or Linux?</summary><p>Not yet. Nature Launcher is Windows only for now.</p></details>
+  </section>
+
+  <section class="cta">
+    <h2 class="shadowed">Set sail.</h2>
+    <a class="btn big caps" href="https://github.com/avadrinkssprite/nature-launcher/releases/latest/download/NatureLauncherSetup.exe">Download for Windows →</a>
+  </section>
+
+  <footer>
+    <span>Nature Launcher · <a href="https://github.com/avadrinkssprite/nature-launcher">GitHub</a></span>
+    <span>Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft.</span>
+  </footer>
+
+  <script src="bg.js"></script>
+</body>
+</html>
