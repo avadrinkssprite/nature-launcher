@@ -386,7 +386,8 @@ module.exports = function createCore(ROOT) {
 
     const args = [`-Xmx${memory}G`, '-Xms512M', ...jvm.map(sub), v.mainClass, ...game.map(sub)];
     log(`Launching ${id} with ${javaExe}`);
-    const proc = spawn(javaExe, args, { cwd: gameDir, windowsHide: true });
+    // detached: Electron kills attached children when it quits; the game should outlive the launcher
+    const proc = spawn(javaExe, args, { cwd: gameDir, windowsHide: true, detached: true });
     const parse = logParser(log);
     proc.stdout.on('data', d => parse(String(d)));
     proc.stderr.on('data', d => log(String(d).trimEnd()));
