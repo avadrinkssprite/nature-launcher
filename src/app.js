@@ -275,7 +275,7 @@ function renderAccounts() {
   $('#accountName').textContent = sel ? sel.name : 'Sign in';
   $('#accList').innerHTML = c.accounts.length ? c.accounts.map(a =>
     `<li class="${a.id === c.selected ? 'on' : ''}" data-id="${esc(a.id)}"><button type="button" class="name" style="text-align:left">${esc(a.name)}</button>
-      <span class="size">${a.type === 'ms' ? 'Microsoft' : 'Offline'}</span><button type="button" class="x" aria-label="Remove ${esc(a.name)}">×</button></li>`).join('')
+      <span class="size">${a.type === 'ms' ? 'Microsoft' : a.type === 'token' ? 'Token' : 'Offline'}</span><button type="button" class="x" aria-label="Remove ${esc(a.name)}">×</button></li>`).join('')
     : '<li class="empty">No accounts</li>';
 }
 const openAccounts = () => { renderAccounts(); $('#dlgAccounts').showModal(); };
@@ -291,6 +291,16 @@ $('#msLogin').onclick = async () => {
   $('#msLogin').disabled = false;
 };
 $('#offAdd').onclick = async () => { state.cfg = await act('acc:offline', $('#offName').value); $('#offName').value = ''; renderAccounts(); };
+$('#tokAdd').onclick = async () => {
+  const b = $('#tokAdd');
+  b.disabled = true;
+  try {
+    state.cfg = await act('acc:token', { token: $('#tokName').value, refresh: $('#tokRefresh').value });
+    $('#tokName').value = ''; $('#tokRefresh').value = '';
+    renderAccounts(); toast('Account added');
+  } catch {}
+  b.disabled = false;
+};
 
 // ---------- boot ----------
 (async () => {

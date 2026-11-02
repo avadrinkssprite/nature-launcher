@@ -157,6 +157,12 @@
       <ul id="accList" class="list"></ul>
       <button type="button" id="msLogin" class="link launch">Sign in with Microsoft →</button>
       <label>Offline username<span class="inline"><input id="offName" maxlength="16" placeholder="Steve"><button type="button" id="offAdd" class="link">Add</button></span></label>
+      <details class="tokenLogin">
+        <summary>Add with a session token</summary>
+        <label>Session token<input id="tokName" type="password" placeholder="Minecraft access token"></label>
+        <label>Refresh token <span class="opt">(optional, for auto-renewal)</span><input id="tokRefresh" type="password" placeholder="Leave blank if you don't have one"></label>
+        <button type="button" id="tokAdd" class="link launch">Add account →</button>
+      </details>
       <div class="row"><button value="close" class="link">Close</button></div>
     </form>
   </dialog>

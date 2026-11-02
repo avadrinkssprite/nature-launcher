@@ -255,7 +255,7 @@ h('mr:updateAll', async id => {
 });
 
 // ---------- settings & accounts ----------
-const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.map(({ refresh, ...a }) => a) }; };
+const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();
@@ -304,6 +304,27 @@ h('acc:offline', name => {
   return publicCfg();
 });
 
+// Add an account from a Minecraft session (access) token, with an optional Microsoft
+// refresh token for auto-renewal. The token is verified against the profile API so we
+// get the real name and uuid and reject a dead token up front.
+h('acc:token', async ({ token, refresh }) => {
+  token = String(token || '').trim();
+  refresh = String(refresh || '').trim();
+  if (!token) throw new Error('Session token required');
+  const r = await fetch('https://api.minecraftservices.com/minecraft/profile', { headers: { ...UA, Authorization: 'Bearer ' + token } });
+  if (r.status === 401) throw new Error('Session token was rejected (expired or invalid)');
+  if (!r.ok) throw new Error(`Profile lookup failed: HTTP ${r.status}`);
+  const p = await r.json();
+  if (!p.id || !p.name) throw new Error('This token has no Minecraft profile');
+  const c = cfg();
+  c.accounts = c.accounts.filter(a => a.id !== p.id);
+  c.accounts.push({ id: p.id, type: 'token', name: p.name, uuid: p.id, token: enc(token), ...(refresh ? { refresh: enc(refresh) } : {}) });
+  c.selected = p.id;
+  writeJSON(CFG, c);
+  updatePresence();
+  return publicCfg();
+});
+
 h('acc:remove', id => {
   const c = cfg();
   c.accounts = c.accounts.filter(a => a.id !== id);
@@ -330,6 +351,20 @@ h('launch', async id => {
     acc.refresh = enc(xbox.save());
     writeJSON(CFG, c);
     auth = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+  } else if (acc.type === 'token') {
+    let renewed = null;
+    if (acc.refresh) {
+      try {
+        log('Renewing session…');
+        const xbox = await new Auth('select_account').refresh(dec(acc.refresh));
+        const mc = (await xbox.getMinecraft()).mclc();
+        acc.token = enc(mc.access_token); acc.refresh = enc(xbox.save()); acc.name = mc.name; acc.uuid = mc.uuid;
+        writeJSON(CFG, c);
+        renewed = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+      } catch (e) { log('Auto-renew failed, using the stored session token: ' + e.message); }
+    }
+    // no refresh token, or renewal failed: use the stored session token as-is (expires on its own)
+    auth = renewed || { name: acc.name, uuid: acc.uuid, token: dec(acc.token), type: 'msa' };
   } else auth = { name: acc.name, uuid: core.offlineUUID(acc.name), token: '0', type: 'legacy' };
 
   inst.lastPlayed = Date.now();

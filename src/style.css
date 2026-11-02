@@ -154,6 +154,12 @@ dialog .inline input { flex: 1; }
 dialog .list { max-height: 200px; border: 1px solid rgba(238, 241, 248, .12); }
 dialog .list .on .name { color: var(--warm); }
 #msLogin { justify-self: start; }
+.tokenLogin { display: grid; gap: 14px; }
+.tokenLogin summary { cursor: pointer; color: var(--dim); font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
+.tokenLogin summary:hover { color: var(--ink); }
+.tokenLogin[open] summary { margin-bottom: -2px; }
+.tokenLogin .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--dim); opacity: .8; }
+#tokAdd { justify-self: start; }
 #dlgNew { width: 560px; }
 #dlgNew .tabs { margin: 0 0 4px; gap: 18px; }
 .src { display: grid; gap: 14px; }
