@@ -167,6 +167,28 @@ select option { background: #172b55; }
 #dpList .x:hover { color: var(--danger); }
 #dpList .empty { color: var(--dim); font-style: italic; justify-content: center; }
 #dpAdd { justify-self: start; }
+#nbtOpen { justify-self: start; }
+
+/* raw NBT tree editor */
+#dlgNbt { width: 680px; }
+#nbtWorld { margin: -8px 0 0; }
+.nbtTree { max-height: 55vh; overflow: auto; border: 1px solid rgba(238, 241, 248, .12); background: rgba(10, 20, 45, .4); padding: 8px 10px; }
+.nbtul { list-style: none; margin: 0; padding-left: 16px; }
+.nbtTree > .nbtul { padding-left: 0; }
+.nbtrow { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.nbttog { width: 16px; flex: none; color: var(--warm); font-size: 10px; cursor: pointer; }
+.nbtsp { width: 16px; flex: none; }
+.nbtname, .nbtidx { width: 160px; flex: none; font: 12px Consolas, monospace; }
+.nbtname { padding: 2px 6px; }
+.nbtidx { color: var(--dim); }
+.nbttype { width: 60px; flex: none; color: var(--warm); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+.nbtval { flex: 1; min-width: 0; font: 12px Consolas, monospace; padding: 2px 6px; }
+.nbtcount { flex: 1; color: var(--dim); font: 12px Consolas, monospace; }
+.nbtdel { width: 18px; flex: none; color: var(--dim); font-size: 14px; line-height: 1; cursor: pointer; }
+.nbtdel:hover { color: var(--danger); }
+.nbtadd { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+.nbtadd select, .nbtadd input { font: 12px Consolas, monospace; padding: 2px 6px; text-transform: none; letter-spacing: 0; }
+.nbtadd .nbtname { width: 160px; }
 
 #log { margin: 0; padding: 14px 18px; overflow: auto; flex: 1; font: 11.5px/1.5 Consolas, monospace; color: #d7deef; white-space: pre-wrap; word-break: break-all; }
 

@@ -395,6 +395,112 @@ $('#dlgWorld').onclose = async () => {
   } catch {}
 };
 
+// ---------- raw NBT editor ----------
+// Tag ids match nbt.js. Editor model: scalars keep their value; compound v = [{name, node}]; list v = {et, items:[node]}.
+const NBT_NAME = { 1: 'byte', 2: 'short', 3: 'int', 4: 'long', 5: 'float', 6: 'double', 7: 'byteArray', 8: 'string', 9: 'list', 10: 'compound', 11: 'intArray', 12: 'longArray' };
+const NBT_ADDABLE = [1, 2, 3, 4, 5, 6, 8, 11, 7, 12, 9, 10];
+const NBT_INTLIMITS = { 1: [-128, 127], 2: [-32768, 32767], 3: [-2147483648, 2147483647] };
+const nbtContainer = t => t === 9 || t === 10;
+function nbtDefault(t) { return t === 4 ? 0n : t === 8 ? '' : t === 9 ? { et: 8, items: [] } : t === 10 ? [] : (t === 7 || t === 11 || t === 12) ? [] : 0; }
+function toEditor(tag) {
+  if (tag.t === 10) return { t: 10, v: [...tag.v].map(([name, ch]) => ({ name, node: toEditor(ch) })) };
+  if (tag.t === 9) return { t: 9, v: { et: tag.v.et, items: tag.v.items.map(it => toEditor({ t: tag.v.et, v: it })) } };
+  return { t: tag.t, v: tag.v };
+}
+function fromEditor(node) {
+  if (node.t === 10) { const m = new Map(); for (const e of node.v) m.set(e.name, fromEditor(e.node)); return { t: 10, v: m }; }
+  if (node.t === 9) return { t: 9, v: { et: node.v.et, items: node.v.items.map(ch => fromEditor(ch).v) } };
+  return { t: node.t, v: node.v };
+}
+const nbtStr = (t, v) => t === 4 ? v.toString() : t === 12 ? v.map(x => x.toString()).join(', ') : (t === 7 || t === 11) ? v.join(', ') : String(v);
+function nbtParse(t, cur, s) {
+  if (NBT_INTLIMITS[t]) { const n = Math.trunc(Number(s)); if (!Number.isFinite(n)) return cur; const [lo, hi] = NBT_INTLIMITS[t]; return Math.max(lo, Math.min(hi, n)); }
+  if (t === 4) { try { return BigInt(s.trim()); } catch { return cur; } }
+  if (t === 5 || t === 6) { const n = Number(s); return Number.isFinite(n) ? n : cur; }
+  if (t === 8) return s;
+  const parts = s.split(',').map(x => x.trim()).filter(x => x !== '');
+  if (t === 12) { try { return parts.map(x => BigInt(x)); } catch { return cur; } }
+  return parts.map(x => Math.trunc(Number(x)) || 0); // byteArray / intArray
+}
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+
+function nbtChildList(node) { // node is compound or list; returns a <ul>
+  const ul = el('ul', 'nbtul');
+  const render = () => {
+    ul.innerHTML = '';
+    const entries = node.t === 10 ? node.v : node.v.items;
+    entries.forEach((entry, i) => ul.appendChild(nbtRow(node, entry, i, render)));
+    ul.appendChild(nbtAddRow(node, render));
+  };
+  render();
+  return ul;
+}
+function nbtRow(parent, entry, index, rerender) {
+  const child = parent.t === 10 ? entry.node : entry;
+  const name = parent.t === 10 ? entry.name : null;
+  const li = el('li'), row = el('div', 'nbtrow');
+  if (nbtContainer(child.t)) {
+    const tog = el('button', 'nbttog', '▸'); tog.type = 'button';
+    let sub = null;
+    tog.onclick = () => { if (sub) { sub.remove(); sub = null; tog.textContent = '▸'; } else { sub = nbtChildList(child); li.appendChild(sub); tog.textContent = '▾'; } };
+    row.appendChild(tog);
+  } else row.appendChild(el('span', 'nbtsp'));
+  if (name !== null) {
+    const nin = el('input', 'nbtname'); nin.value = name;
+    nin.onchange = () => { const v = nin.value.trim(); if (v && !parent.v.some((e, j) => j !== index && e.name === v)) parent.v[index].name = v; else nin.value = parent.v[index].name; };
+    row.appendChild(nin);
+  } else row.appendChild(el('span', 'nbtidx', '[' + index + ']'));
+  row.appendChild(el('span', 'nbttype', NBT_NAME[child.t]));
+  if (nbtContainer(child.t)) row.appendChild(el('span', 'nbtcount', child.t === 10 ? `{${child.v.length}}` : `[${child.v.items.length}]`));
+  else {
+    const vin = el('input', 'nbtval'); vin.value = nbtStr(child.t, child.v);
+    vin.onchange = () => { child.v = nbtParse(child.t, child.v, vin.value); vin.value = nbtStr(child.t, child.v); };
+    row.appendChild(vin);
+  }
+  const del = el('button', 'nbtdel', '×'); del.type = 'button';
+  del.onclick = () => { (parent.t === 10 ? parent.v : parent.v.items).splice(index, 1); rerender(); };
+  row.appendChild(del);
+  li.appendChild(row);
+  return li;
+}
+function nbtAddRow(node, rerender) {
+  const li = el('li', 'nbtadd');
+  const sel = el('select');
+  // a list's elements must all share one type: pick it only while the list is empty
+  const types = node.t === 10 ? NBT_ADDABLE : node.v.items.length ? [node.v.et] : NBT_ADDABLE;
+  for (const t of types) { const o = el('option', null, NBT_NAME[t]); o.value = t; sel.appendChild(o); }
+  sel.disabled = node.t === 9 && node.v.items.length > 0;
+  let nameIn;
+  if (node.t === 10) { nameIn = el('input', 'nbtname'); nameIn.placeholder = 'name'; li.appendChild(sel); li.appendChild(nameIn); }
+  else { li.appendChild(el('span', 'nbtsp')); li.appendChild(sel); }
+  const add = el('button', 'link', '+ add'); add.type = 'button';
+  add.onclick = () => {
+    const t = +sel.value, child = { t, v: nbtDefault(t) };
+    if (node.t === 10) { const nm = nameIn.value.trim() || 'new'; if (node.v.some(e => e.name === nm)) return toast('A tag named ' + nm + ' already exists', true); node.v.push({ name: nm, node: child }); }
+    else { if (!node.v.items.length) node.v.et = t; node.v.items.push({ t: node.v.et, v: nbtDefault(node.v.et) }); }
+    rerender();
+  };
+  li.appendChild(add);
+  return li;
+}
+
+let nbtRootNode = null, nbtFolder = null;
+$('#nbtOpen').onclick = async () => {
+  nbtFolder = editingWorld;
+  try {
+    const tree = await act('nbt:read', state.current, nbtFolder);
+    nbtRootNode = toEditor(tree);
+    $('#nbtWorld').textContent = editingWorld;
+    $('#nbtTree').innerHTML = '';
+    $('#nbtTree').appendChild(nbtChildList(nbtRootNode));
+    $('#dlgNbt').showModal();
+  } catch {}
+};
+$('#dlgNbt').onclose = async () => {
+  if ($('#dlgNbt').returnValue !== 'ok') return;
+  try { await act('nbt:write', state.current, nbtFolder, fromEditor(nbtRootNode)); toast('level.dat saved'); loadWorlds(); } catch {}
+};
+
 // ---------- screenshots ----------
 async function loadShots() {
   const i = cur();

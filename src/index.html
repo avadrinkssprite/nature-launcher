@@ -207,7 +207,18 @@
         <button type="button" id="dpAdd" class="link">Add datapack (.zip)</button>
       </div>
 
+      <button type="button" id="nbtOpen" class="link">Edit raw NBT (level.dat) →</button>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgNbt">
+    <form method="dialog" id="formNbt">
+      <h2>Raw NBT</h2>
+      <p class="opt" id="nbtWorld"></p>
+      <div class="nbtTree" id="nbtTree"></div>
+      <p class="hint" id="nbtErr">Editing level.dat directly. A backup is saved as level.dat_nlbak before the first save.</p>
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save level.dat</button></div>
     </form>
   </dialog>
 

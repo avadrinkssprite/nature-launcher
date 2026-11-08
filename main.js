@@ -260,6 +260,23 @@ h('worlds:save', (id, folder, patch) => {
 h('worlds:open', (id, folder) => shell.openPath(worldDir(id, folder)));
 h('worlds:delete', (id, folder) => { notRunning(id); fs.rmSync(worldDir(id, folder), { recursive: true, force: true }); });
 
+// raw NBT tree of level.dat (Maps/BigInts survive structured-clone over IPC)
+h('nbt:read', (id, folder) => {
+  const wp = worldDir(id, folder);
+  if (!hasLevel(wp)) throw new Error('World not found');
+  return worlds.readLevel(wp).tree;
+});
+h('nbt:write', (id, folder, tree) => {
+  notRunning(id);
+  const wp = worldDir(id, folder);
+  if (!hasLevel(wp)) throw new Error('World not found');
+  if (!tree || tree.t !== 10 || !(tree.v instanceof Map)) throw new Error('Root must be a compound tag');
+  const bak = path.join(wp, 'level.dat_nlbak'); // one-time backup before the first raw edit
+  if (!fs.existsSync(bak)) fs.copyFileSync(path.join(wp, 'level.dat'), bak);
+  worlds.writeLevel(wp, { t: 10, name: '', v: tree.v }, worlds.readLevel(wp).gz);
+  return true;
+});
+
 const dpDir = (id, folder) => { const d = path.join(worldDir(id, folder), 'datapacks'); fs.mkdirSync(d, { recursive: true }); return d; };
 h('dp:list', (id, folder) => {
   const dir = dpDir(id, folder);
