@@ -1,10 +1,11 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, safeStorage, Notification, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { AdmZip } = require('./lib/deps');
 const { Auth } = require('./lib/deps');
 const createCore = require('./mc');
 const createRpc = require('./discord');
+const worlds = require('./worlds');
 
 // pinned so the packaged exe (named "Nature Launcher") keeps using the same data folder
 app.setPath('userData', path.join(app.getPath('appData'), 'nature-launcher'));
@@ -175,6 +176,110 @@ h('content:add', async (id, kind, paths) => {
   for (const p of paths) fs.cpSync(p, path.join(d, path.basename(p)), { recursive: true });
   return paths.length;
 });
+
+// ---------- content icons ----------
+// pack.png (packs) or the mod's declared icon (mods), as a data URL. Cached by file mtime.
+const iconCache = new Map();
+const zipPng = (zip, name) => { const e = name && zip.getEntry(name); return e ? e.getData() : null; };
+function extractIcon(file, kind) {
+  const zip = new AdmZip(file);
+  if (kind !== 'mods') return zipPng(zip, 'pack.png');
+  let ic;
+  const fm = zip.getEntry('fabric.mod.json');
+  if (fm) { try { ic = JSON.parse(fm.getData().toString('utf8')).icon; } catch {} }
+  if (!ic) { const q = zip.getEntry('quilt.mod.json'); if (q) { try { ic = JSON.parse(q.getData().toString('utf8'))?.quilt_loader?.metadata?.icon; } catch {} } }
+  if (ic && typeof ic === 'object') ic = Object.values(ic).pop(); // { "128": "path" }
+  return zipPng(zip, ic) || zipPng(zip, 'pack.png') || zipPng(zip, 'logo.png') || zipPng(zip, 'icon.png')
+    || (() => { const e = zip.getEntries().find(e => /^assets\/[^/]+\/icon\.png$/.test(e.entryName)); return e ? e.getData() : null; })();
+}
+h('content:icon', (id, kind, file) => {
+  const p = path.join(kindDir(id, kind), path.basename(file));
+  let st; try { st = fs.statSync(p); } catch { return null; }
+  if (!st.isFile()) return null;
+  const hit = iconCache.get(p);
+  if (hit && hit.mtime === st.mtimeMs) return hit.url;
+  let url = null;
+  try { const png = extractIcon(p, kind); if (png) url = 'data:image/png;base64,' + png.toString('base64'); } catch {}
+  iconCache.set(p, { mtime: st.mtimeMs, url });
+  return url;
+});
+
+// ---------- screenshots ----------
+const shotsDir = id => path.join(instDir(id), 'screenshots');
+h('shots:list', id => {
+  const d = shotsDir(id);
+  if (!fs.existsSync(d)) return [];
+  return fs.readdirSync(d).filter(f => /\.(png|jpe?g)$/i.test(f))
+    .map(f => { const s = fs.statSync(path.join(d, f)); return { file: f, size: s.size, mtime: s.mtimeMs }; })
+    .sort((a, b) => b.mtime - a.mtime);
+});
+h('shots:thumb', (id, file) => {
+  const p = path.join(shotsDir(id), path.basename(file));
+  if (!fs.existsSync(p)) return null;
+  const img = nativeImage.createFromPath(p);
+  if (img.isEmpty()) return null;
+  const { width } = img.getSize();
+  return (width > 480 ? img.resize({ width: 480 }) : img).toDataURL();
+});
+h('shots:open', (id, file) => shell.openPath(path.join(shotsDir(id), path.basename(file))));
+h('shots:remove', (id, file) => fs.rmSync(path.join(shotsDir(id), path.basename(file)), { force: true }));
+h('shots:folder', id => { const d = shotsDir(id); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
+
+// ---------- worlds & datapacks ----------
+const savesDir = id => path.join(instDir(id), 'saves');
+const worldDir = (id, folder) => path.join(savesDir(id), path.basename(folder));
+const hasLevel = wp => fs.existsSync(path.join(wp, 'level.dat'));
+const notRunning = id => { if (running.has(path.basename(id))) throw new Error('Close the game first'); };
+
+h('worlds:list', id => {
+  const s = savesDir(id);
+  if (!fs.existsSync(s)) return [];
+  return fs.readdirSync(s).reduce((out, folder) => {
+    const wp = path.join(s, folder);
+    if (!hasLevel(wp)) return out;
+    const info = { folder, name: folder, icon: fs.existsSync(path.join(wp, 'icon.png')) };
+    try { Object.assign(info, worlds.summary(wp)); if (!info.name) info.name = folder; }
+    catch (e) { info.error = e.message; }
+    out.push(info);
+    return out;
+  }, []).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+});
+h('worlds:icon', (id, folder) => {
+  const p = path.join(worldDir(id, folder), 'icon.png');
+  if (!fs.existsSync(p)) return null;
+  const img = nativeImage.createFromPath(p);
+  return img.isEmpty() ? null : img.toDataURL();
+});
+h('worlds:save', (id, folder, patch) => {
+  notRunning(id);
+  const wp = worldDir(id, folder);
+  if (!hasLevel(wp)) throw new Error('World not found');
+  worlds.edit(wp, patch);
+  return true;
+});
+h('worlds:open', (id, folder) => shell.openPath(worldDir(id, folder)));
+h('worlds:delete', (id, folder) => { notRunning(id); fs.rmSync(worldDir(id, folder), { recursive: true, force: true }); });
+
+const dpDir = (id, folder) => { const d = path.join(worldDir(id, folder), 'datapacks'); fs.mkdirSync(d, { recursive: true }); return d; };
+h('dp:list', (id, folder) => {
+  const dir = dpDir(id, folder);
+  const dis = worlds.disabledPacks(worldDir(id, folder));
+  return fs.readdirSync(dir, { withFileTypes: true }).filter(e => !e.name.startsWith('.'))
+    .map(e => ({ file: e.name, dir: e.isDirectory(), enabled: !dis.has('file/' + e.name), size: e.isFile() ? fs.statSync(path.join(dir, e.name)).size : null }))
+    .sort((a, b) => a.file.localeCompare(b.file));
+});
+h('dp:add', async (id, folder, paths) => {
+  notRunning(id);
+  const dir = dpDir(id, folder), wp = worldDir(id, folder);
+  if (!paths?.length) {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Datapacks', extensions: ['zip'] }] });
+    paths = r.filePaths;
+  }
+  for (const p of paths) { const name = path.basename(p); fs.cpSync(p, path.join(dir, name), { recursive: true }); worlds.setPackEnabled(wp, name, true); }
+  return paths.length;
+});
+h('dp:toggle', (id, folder, file, enabled) => { notRunning(id); worlds.setPackEnabled(worldDir(id, folder), path.basename(file), enabled); });
+h('dp:remove', (id, folder, file) => { notRunning(id); fs.rmSync(path.join(dpDir(id, folder), path.basename(file)), { recursive: true, force: true }); worlds.setPackEnabled(worldDir(id, folder), path.basename(file), null); });
 
 // ---------- modrinth ----------
 h('mr:search', ({ id, query, kind, offset = 0 }) => {

@@ -130,6 +130,44 @@ select option { background: #172b55; }
 .cards .link { align-self: start; white-space: nowrap; }
 .more { align-self: center; margin: 4px 0 14px; }
 
+/* embedded mod/pack icon in the file list */
+.list .ico { width: 24px; height: 24px; flex: none; image-rendering: pixelated; background: rgba(238, 241, 248, .06) center/cover no-repeat; border: 1px solid rgba(238, 241, 248, .08); }
+.list .off .ico { opacity: .5; }
+
+/* worlds */
+.worlds { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.worlds li { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid rgba(238, 241, 248, .07); }
+.worlds li:hover { background: var(--glass-hi); }
+.worlds .wicon { width: 44px; height: 44px; flex: none; image-rendering: pixelated; background: rgba(238, 241, 248, .06) center/cover no-repeat; border: 1px solid rgba(238, 241, 248, .1); }
+.worlds .winfo { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.worlds .wname { font: 20px/1.1 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.worlds .wmeta { color: var(--dim); font-size: 11px; letter-spacing: .04em; }
+.worlds .empty { justify-content: center; padding: 40px; color: var(--dim); font: italic 18px var(--serif); display: flex; }
+
+/* screenshots */
+.shots { overflow-y: auto; flex: 1; padding: 16px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-content: start; }
+.shots .shot { margin: 0; border: 1px solid rgba(238, 241, 248, .12); background: rgba(10, 20, 45, .3); cursor: pointer; }
+.shots .shot:hover { border-color: var(--warm); }
+.shots .thumb { display: block; width: 100%; aspect-ratio: 16 / 9; background: rgba(238, 241, 248, .05) center/cover no-repeat; }
+.shots figcaption { display: flex; align-items: center; gap: 8px; padding: 7px 10px; }
+.shots .sname { flex: 1; font-size: 11px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shots figcaption .x { color: var(--dim); font-size: 16px; line-height: 1; }
+.shots figcaption .x:hover { color: var(--danger); }
+.shots .empty { grid-column: 1 / -1; justify-self: center; padding: 50px; color: var(--dim); font: italic 18px var(--serif); }
+
+#dlgWorld { width: 480px; }
+#dlgWorld .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dpSection { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.dpSection .opt { text-transform: none; letter-spacing: 0; font-weight: 400; }
+#dpList { list-style: none; margin: 0; padding: 0; max-height: 160px; overflow-y: auto; border: 1px solid rgba(238, 241, 248, .12); }
+#dpList li { display: flex; align-items: center; gap: 12px; padding: 7px 10px; border-bottom: 1px solid rgba(238, 241, 248, .06); }
+#dpList .name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#dpList .off .name { color: var(--dim); text-decoration: line-through; }
+#dpList .x { color: var(--dim); font-size: 16px; line-height: 1; }
+#dpList .x:hover { color: var(--danger); }
+#dpList .empty { color: var(--dim); font-style: italic; justify-content: center; }
+#dpAdd { justify-self: start; }
+
 #log { margin: 0; padding: 14px 18px; overflow: auto; flex: 1; font: 11.5px/1.5 Consolas, monospace; color: #d7deef; white-space: pre-wrap; word-break: break-all; }
 
 .toast {

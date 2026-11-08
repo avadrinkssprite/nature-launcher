@@ -57,9 +57,13 @@ function showTab(tab) {
   state.tab = tab;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const local = ['mods', 'resourcepacks', 'shaderpacks'].includes(tab);
-  $('#panelLocal').hidden = !local; $('#panelBrowse').hidden = tab !== 'browse'; $('#panelLog').hidden = tab !== 'log';
+  $('#panelLocal').hidden = !local; $('#panelBrowse').hidden = tab !== 'browse';
+  $('#panelWorlds').hidden = tab !== 'worlds'; $('#panelShots').hidden = tab !== 'screenshots';
+  $('#panelLog').hidden = tab !== 'log';
   if (local) loadLocal();
   if (tab === 'browse') { if (!$('#mrList').children.length) search(); }
+  if (tab === 'worlds') loadWorlds();
+  if (tab === 'screenshots') loadShots();
   if (tab === 'log') $('#log').scrollTop = 1e9;
 }
 $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); };
@@ -76,9 +80,21 @@ async function loadLocal() {
   $('#localList').innerHTML = items.length ? items.map(x =>
     `<li class="${x.enabled ? '' : 'off'}" data-file="${esc(x.file)}">
       <input type="checkbox" class="sw" ${x.enabled ? 'checked' : ''} aria-label="Enable ${esc(x.name)}">
+      <span class="ico" data-icon></span>
       <span class="name">${esc(x.name)}</span><span class="size">${fmtSize(x.size)}</span>
       <button class="x" title="Delete" aria-label="Delete ${esc(x.name)}">×</button></li>`).join('')
     : `<li class="empty">Nothing here yet — add files, drop them in, or browse Modrinth.</li>`;
+  loadIcons(i.id, kind);
+}
+// fetch each file's embedded icon lazily so the list renders instantly
+async function loadIcons(id, kind) {
+  for (const el of $('#localList').querySelectorAll('[data-icon]')) {
+    const file = el.closest('li').dataset.file;
+    el.removeAttribute('data-icon');
+    act('content:icon', id, kind, file).then(url => {
+      if (url && state.tab === kind && cur()?.id === id) el.style.backgroundImage = `url("${url}")`;
+    }).catch(() => {});
+  }
 }
 $('#localList').onclick = async e => {
   const li = e.target.closest('li[data-file]'); if (!li) return;
@@ -300,6 +316,108 @@ $('#tokAdd').onclick = async () => {
     renderAccounts(); toast('Account added');
   } catch {}
   b.disabled = false;
+};
+
+// ---------- worlds ----------
+const GAMEMODES = ['Survival', 'Creative', 'Adventure', 'Spectator'];
+const DIFFICULTIES = ['Peaceful', 'Easy', 'Normal', 'Hard'];
+async function loadWorlds() {
+  const i = cur();
+  const list = await act('worlds:list', i.id);
+  if (state.tab !== 'worlds' || cur() !== i) return;
+  $('#worldCount').textContent = `${list.length} world${list.length === 1 ? '' : 's'}`;
+  $('#worldList').innerHTML = list.length ? list.map(w => `
+    <li data-folder="${esc(w.folder)}">
+      <span class="wicon" data-wicon></span>
+      <span class="winfo">
+        <span class="wname">${esc(w.name)}</span>
+        <span class="wmeta">${w.error ? 'Unreadable: ' + esc(w.error) : `${esc(GAMEMODES[w.gameType] || '?')} · ${esc(DIFFICULTIES[w.difficulty] || '?')}${w.hardcore ? ' · Hardcore' : ''}${w.cheats ? ' · Cheats' : ''}${w.version ? ' · ' + esc(w.version) : ''}`}</span>
+      </span>
+      <span class="actions">
+        <button class="link" data-act="edit"${w.error ? ' disabled' : ''}>Edit</button>
+        <button class="link" data-act="folder">Folder</button>
+        <button class="link danger" data-act="delete">Delete</button>
+      </span>
+    </li>`).join('') : '<li class="empty">No worlds yet. Play the instance to create one.</li>';
+  for (const el of $('#worldList').querySelectorAll('[data-wicon]')) {
+    const folder = el.closest('li').dataset.folder;
+    el.removeAttribute('data-wicon');
+    act('worlds:icon', i.id, folder).then(url => { if (url && cur()?.id === i.id) el.style.backgroundImage = `url("${url}")`; }).catch(() => {});
+  }
+}
+$('#worldsFolder').onclick = () => act('worlds:open', state.current, '.'); // '.' resolves to the saves folder
+$('#worldList').onclick = async e => {
+  const li = e.target.closest('li[data-folder]'); if (!li) return;
+  const folder = li.dataset.folder, a = e.target.dataset.act;
+  if (a === 'folder') act('worlds:open', state.current, folder);
+  else if (a === 'delete') { if (confirm(`Delete world "${folder}" and everything in it? This cannot be undone.`)) { await act('worlds:delete', state.current, folder); loadWorlds(); } }
+  else if (a === 'edit') openWorld(folder);
+};
+
+let editingWorld = null;
+const fWorld = $('#formWorld');
+async function openWorld(folder) {
+  editingWorld = folder;
+  const w = (await act('worlds:list', state.current)).find(x => x.folder === folder);
+  if (!w) return;
+  fWorld.name.value = w.name; fWorld.gameType.value = w.gameType; fWorld.difficulty.value = w.difficulty;
+  fWorld.cheats.checked = w.cheats; fWorld.hardcore.checked = w.hardcore;
+  $('#worldErr').textContent = '';
+  await loadDatapacks();
+  $('#dlgWorld').showModal();
+}
+async function loadDatapacks() {
+  const packs = await act('dp:list', state.current, editingWorld);
+  $('#dpCount').textContent = packs.length ? `(${packs.filter(p => p.enabled).length}/${packs.length} on)` : '';
+  $('#dpList').innerHTML = packs.length ? packs.map(p => `
+    <li class="${p.enabled ? '' : 'off'}" data-file="${esc(p.file)}">
+      <input type="checkbox" class="sw" ${p.enabled ? 'checked' : ''} aria-label="Enable ${esc(p.file)}">
+      <span class="name">${esc(p.file)}</span>
+      <button type="button" class="x" title="Remove">×</button></li>`).join('') : '<li class="empty">No datapacks</li>';
+}
+$('#dpList').onclick = async e => {
+  const li = e.target.closest('li[data-file]'); if (!li) return;
+  const file = li.dataset.file;
+  if (e.target.classList.contains('sw')) await act('dp:toggle', state.current, editingWorld, file, e.target.checked);
+  else if (e.target.classList.contains('x')) { if (!confirm(`Remove datapack ${file}?`)) return; await act('dp:remove', state.current, editingWorld, file); }
+  else return;
+  loadDatapacks();
+};
+$('#dpAdd').onclick = async () => { if (await act('dp:add', state.current, editingWorld)) { loadDatapacks(); toast('Datapack added'); } };
+$('#dlgWorld').onclose = async () => {
+  if ($('#dlgWorld').returnValue !== 'ok') return;
+  try {
+    await act('worlds:save', state.current, editingWorld, {
+      name: fWorld.name.value.trim(), gameType: +fWorld.gameType.value, difficulty: +fWorld.difficulty.value,
+      cheats: fWorld.cheats.checked, hardcore: fWorld.hardcore.checked,
+    });
+    toast('World saved'); loadWorlds();
+  } catch {}
+};
+
+// ---------- screenshots ----------
+async function loadShots() {
+  const i = cur();
+  const shots = await act('shots:list', i.id);
+  if (state.tab !== 'screenshots' || cur() !== i) return;
+  $('#shotCount').textContent = `${shots.length} screenshot${shots.length === 1 ? '' : 's'}`;
+  $('#shotGrid').innerHTML = shots.length ? shots.map(s => `
+    <figure class="shot" data-file="${esc(s.file)}">
+      <span class="thumb" data-thumb></span>
+      <figcaption><span class="sname">${esc(s.file)}</span><button class="x" title="Delete">×</button></figcaption>
+    </figure>`).join('') : '<div class="empty">No screenshots yet. Press F2 in-game to take one.</div>';
+  for (const el of $('#shotGrid').querySelectorAll('[data-thumb]')) {
+    const file = el.closest('figure').dataset.file;
+    el.removeAttribute('data-thumb');
+    act('shots:thumb', i.id, file).then(url => { if (url && state.tab === 'screenshots' && cur()?.id === i.id) el.style.backgroundImage = `url("${url}")`; }).catch(() => {});
+  }
+}
+$('#shotsFolder').onclick = () => act('shots:folder', state.current);
+$('#shotGrid').onclick = async e => {
+  const fig = e.target.closest('figure[data-file]'); if (!fig) return;
+  const file = fig.dataset.file;
+  if (e.target.classList.contains('x')) { if (confirm(`Delete ${file}?`)) { await act('shots:remove', state.current, file); loadShots(); } }
+  else act('shots:open', state.current, file);
 };
 
 // ---------- boot ----------

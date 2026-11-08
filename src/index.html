@@ -59,6 +59,8 @@
         <button data-tab="resourcepacks">Resource packs</button>
         <button data-tab="shaderpacks">Shaders</button>
         <button data-tab="browse">Browse Modrinth</button>
+        <button data-tab="worlds">Worlds</button>
+        <button data-tab="screenshots">Screenshots</button>
         <button data-tab="log">Log</button>
       </nav>
 
@@ -88,6 +90,26 @@
         <div id="mrHint" class="hint"></div>
         <ul id="mrList" class="cards"></ul>
         <button id="mrMore" class="link more" hidden>Load more</button>
+      </div>
+
+      <div class="panel" id="panelWorlds" hidden>
+        <div class="toolbar">
+          <span id="worldCount" class="label"></span>
+          <span class="actions">
+            <button class="link" id="worldsFolder">Open saves folder</button>
+          </span>
+        </div>
+        <ul id="worldList" class="worlds"></ul>
+      </div>
+
+      <div class="panel" id="panelShots" hidden>
+        <div class="toolbar">
+          <span id="shotCount" class="label"></span>
+          <span class="actions">
+            <button class="link" id="shotsFolder">Open folder</button>
+          </span>
+        </div>
+        <div id="shotGrid" class="shots"></div>
       </div>
 
       <div class="panel" id="panelLog" hidden>
@@ -164,6 +186,28 @@
         <button type="button" id="tokAdd" class="link launch">Add account →</button>
       </details>
       <div class="row"><button value="close" class="link">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgWorld">
+    <form method="dialog" id="formWorld">
+      <h2>Edit world</h2>
+      <label>World name<input name="name" maxlength="64"></label>
+      <div class="two">
+        <label>Game mode<select name="gameType"><option value="0">Survival</option><option value="1">Creative</option><option value="2">Adventure</option><option value="3">Spectator</option></select></label>
+        <label>Difficulty<select name="difficulty"><option value="0">Peaceful</option><option value="1">Easy</option><option value="2">Normal</option><option value="3">Hard</option></select></label>
+      </div>
+      <label class="check"><input type="checkbox" name="cheats"> Allow cheats (commands)</label>
+      <label class="check"><input type="checkbox" name="hardcore"> Hardcore</label>
+      <p class="hint" id="worldErr"></p>
+
+      <div class="dpSection">
+        <div class="label">Datapacks <span id="dpCount" class="opt"></span></div>
+        <ul id="dpList" class="list"></ul>
+        <button type="button" id="dpAdd" class="link">Add datapack (.zip)</button>
+      </div>
+
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
 
