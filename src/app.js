@@ -50,6 +50,12 @@ function renderInstance() {
   $('#launchBtn').disabled = state.running.has(i.id);
   $('#launchBtn').textContent = state.running.has(i.id) ? 'Running' : 'Launch →';
   $('#log').textContent = state.logs[i.id] || 'No output yet.';
+  // show the Schematics tab only for instances that have a schematics folder (e.g. from Litematica)
+  act('sch:has', i.id).then(has => {
+    const tab = document.querySelector('#tabs [data-tab="schematics"]');
+    tab.hidden = !has;
+    if (!has && state.tab === 'schematics') showTab('mods');
+  }).catch(() => {});
   showTab(state.tab);
 }
 
@@ -59,11 +65,12 @@ function showTab(tab) {
   const local = ['mods', 'resourcepacks', 'shaderpacks'].includes(tab);
   $('#panelLocal').hidden = !local; $('#panelBrowse').hidden = tab !== 'browse';
   $('#panelWorlds').hidden = tab !== 'worlds'; $('#panelShots').hidden = tab !== 'screenshots';
-  $('#panelLog').hidden = tab !== 'log';
+  $('#panelSchem').hidden = tab !== 'schematics'; $('#panelLog').hidden = tab !== 'log';
   if (local) loadLocal();
   if (tab === 'browse') { if (!$('#mrList').children.length) search(); }
   if (tab === 'worlds') loadWorlds();
   if (tab === 'screenshots') loadShots();
+  if (tab === 'schematics') loadSchematics();
   if (tab === 'log') $('#log').scrollTop = 1e9;
 }
 $('#tabs').onclick = e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); };
@@ -393,6 +400,38 @@ $('#dlgWorld').onclose = async () => {
     });
     toast('World saved'); loadWorlds();
   } catch {}
+};
+
+// ---------- schematics ----------
+async function loadSchematics() {
+  const i = cur();
+  const items = await act('sch:list', i.id);
+  if (state.tab !== 'schematics' || cur() !== i) return;
+  $('#schemCount').textContent = `${items.length} schematic${items.length === 1 ? '' : 's'}`;
+  $('#schemList').innerHTML = items.length ? items.map(x =>
+    `<li data-file="${esc(x.file)}">
+      <span class="name">${esc(x.file)}</span><span class="size">${fmtSize(x.size)}</span>
+      <button class="link" data-act="open">Open</button>
+      <button class="x" title="Delete" aria-label="Delete ${esc(x.file)}">×</button></li>`).join('')
+    : '<li class="empty">No schematics yet — add .litematic, .schem, .schematic or .nbt files.</li>';
+}
+$('#schemList').onclick = async e => {
+  const li = e.target.closest('li[data-file]'); if (!li) return;
+  const file = li.dataset.file;
+  if (e.target.dataset.act === 'open') act('sch:open', state.current, file);
+  else if (e.target.classList.contains('x')) { if (confirm(`Delete ${file}?`)) { await act('sch:remove', state.current, file); loadSchematics(); } }
+};
+$('#schemAdd').onclick = async () => { if (await act('sch:add', state.current)) loadSchematics(); };
+$('#schemFolder').onclick = () => act('sch:folder', state.current);
+const schemPanel = $('#panelSchem');
+schemPanel.ondragover = e => { e.preventDefault(); schemPanel.classList.add('dragging'); };
+schemPanel.ondragleave = e => { if (!schemPanel.contains(e.relatedTarget)) schemPanel.classList.remove('dragging'); };
+schemPanel.ondrop = async e => {
+  e.preventDefault(); schemPanel.classList.remove('dragging');
+  const paths = [...e.dataTransfer.files].map(pathOf).filter(Boolean);
+  const n = paths.length ? await act('sch:add', state.current, paths) : 0;
+  if (n) { toast(`Added ${n} schematic${n === 1 ? '' : 's'}`); loadSchematics(); }
+  else if (paths.length) toast('Only .litematic, .schem, .schematic or .nbt files', true);
 };
 
 // ---------- raw NBT editor ----------

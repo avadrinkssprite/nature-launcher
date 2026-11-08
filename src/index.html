@@ -61,6 +61,7 @@
         <button data-tab="browse">Browse Modrinth</button>
         <button data-tab="worlds">Worlds</button>
         <button data-tab="screenshots">Screenshots</button>
+        <button data-tab="schematics" hidden>Schematics</button>
         <button data-tab="log">Log</button>
       </nav>
 
@@ -110,6 +111,18 @@
           </span>
         </div>
         <div id="shotGrid" class="shots"></div>
+      </div>
+
+      <div class="panel" id="panelSchem" hidden>
+        <div class="toolbar">
+          <span id="schemCount" class="label"></span>
+          <span class="actions">
+            <button class="link" id="schemAdd">Add files</button>
+            <button class="link" id="schemFolder">Open folder</button>
+          </span>
+        </div>
+        <ul id="schemList" class="list"></ul>
+        <div class="drop">Drop schematics here to add them</div>
       </div>
 
       <div class="panel" id="panelLog" hidden>

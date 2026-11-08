@@ -225,6 +225,41 @@ h('shots:open', (id, file) => shell.openPath(path.join(shotsDir(id), path.basena
 h('shots:remove', (id, file) => fs.rmSync(path.join(shotsDir(id), path.basename(file)), { force: true }));
 h('shots:folder', id => { const d = shotsDir(id); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
 
+// ---------- schematics (Litematica / WorldEdit) ----------
+const SCHEM_EXT = /\.(litematic|schem|schematic|nbt)$/i;
+const schDir = id => path.join(instDir(id), 'schematics');
+// allow subfolders (Litematica supports them) but never escape the schematics folder
+function schFile(id, rel) {
+  const base = schDir(id), p = path.resolve(base, rel);
+  if (p !== base && !p.startsWith(base + path.sep)) throw new Error('Bad schematic path');
+  return p;
+}
+function walkSchem(dir, base) {
+  const out = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name.startsWith('.')) continue;
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...walkSchem(full, base));
+    else if (SCHEM_EXT.test(e.name)) { const s = fs.statSync(full); out.push({ file: path.relative(base, full).split(path.sep).join('/'), size: s.size, mtime: s.mtimeMs }); }
+  }
+  return out;
+}
+h('sch:has', id => fs.existsSync(schDir(id)));
+h('sch:list', id => { const d = schDir(id); return fs.existsSync(d) ? walkSchem(d, d).sort((a, b) => b.mtime - a.mtime) : []; });
+h('sch:add', async (id, paths) => {
+  const d = schDir(id); fs.mkdirSync(d, { recursive: true });
+  if (!paths?.length) {
+    const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Schematics', extensions: ['litematic', 'schem', 'schematic', 'nbt'] }] });
+    paths = r.filePaths;
+  }
+  let n = 0;
+  for (const p of paths) if (SCHEM_EXT.test(p)) { fs.cpSync(p, path.join(d, path.basename(p))); n++; }
+  return n;
+});
+h('sch:remove', (id, file) => fs.rmSync(schFile(id, file), { force: true }));
+h('sch:open', (id, file) => shell.openPath(schFile(id, file)));
+h('sch:folder', id => { const d = schDir(id); fs.mkdirSync(d, { recursive: true }); return shell.openPath(d); });
+
 // ---------- worlds & datapacks ----------
 const savesDir = id => path.join(instDir(id), 'saves');
 const worldDir = (id, folder) => path.join(savesDir(id), path.basename(folder));
