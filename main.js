@@ -387,14 +387,19 @@ h('mr:install', (id, kind, projectId) => install(id, kind, projectId, new Set(),
 // ---------- curseforge (needs the user's own API key from console.curseforge.com) ----------
 const CF_CLASS = { mods: 6, resourcepacks: 12, shaderpacks: 6552 };
 const CF_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }; // CurseForge modLoaderType ids
-async function cfJSON(url) {
+// Browser UA so Cloudflare lets the proxy through; path is the API suffix after /v1 (e.g. "/mods/search?…").
+const CF_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+async function cfJSON(pathq) {
   const key = (cfg().curseforgeKey || '').trim().replace(/^["']+|["']+$/g, ''); // drop stray quotes/spaces from pasting
-  if (!key) throw new Error('Add a CurseForge API key in Settings first');
-  const r = await fetch(url, { headers: { ...UA, 'x-api-key': key, Accept: 'application/json' } });
-  if (r.status === 401) throw new Error('CurseForge rejected the API key. Re-copy it from console.curseforge.com (no quotes or spaces).');
-  // A valid key still gets 403 on gameId 432: CurseForge allow-lists Minecraft access per key.
-  if (r.status === 403) throw new Error('CurseForge blocks Minecraft data for this API key. Minecraft (gameId 432) needs CurseForge-approved access — use Modrinth instead.');
-  if (!r.ok) throw new Error(`CurseForge HTTP ${r.status}`);
+  // With no key, go through api.curse.tools, a public proxy with its own Minecraft-approved key.
+  // With a key, hit CurseForge directly (works only if that key is approved for Minecraft).
+  const url = key ? 'https://api.curseforge.com/v1' + pathq : 'https://api.curse.tools/v1/cf' + pathq;
+  const headers = key ? { ...UA, 'x-api-key': key, Accept: 'application/json' } : { 'User-Agent': CF_UA, Accept: 'application/json' };
+  const r = await fetch(url, { headers });
+  if (r.status === 401) throw new Error('CurseForge rejected the API key. Re-copy it from console.curseforge.com, or clear it to use the no-key proxy.');
+  // A valid personal key still gets 403 on gameId 432 (CurseForge allow-lists Minecraft per key).
+  if (r.status === 403 && key) throw new Error('This API key is not approved for Minecraft. Clear it in Settings to use the no-key CurseForge search instead.');
+  if (!r.ok) throw new Error(`CurseForge search unavailable (HTTP ${r.status})`);
   return r.json();
 }
 h('cf:search', ({ id, query, kind, offset = 0 }) => {
@@ -402,7 +407,7 @@ h('cf:search', ({ id, query, kind, offset = 0 }) => {
   const inst = readInst(id);
   const p = new URLSearchParams({ gameId: '432', classId: String(CF_CLASS[kind]), gameVersion: inst.version, searchFilter: query || '', pageSize: '24', index: String(offset), sortField: '2', sortOrder: 'desc' });
   if (kind === 'mods' && CF_LOADER[inst.loader]) p.set('modLoaderType', String(CF_LOADER[inst.loader]));
-  return cfJSON(`https://api.curseforge.com/v1/mods/search?${p}`).then(j => ({
+  return cfJSON(`/mods/search?${p}`).then(j => ({
     hits: (j.data || []).map(m => ({ project_id: String(m.id), title: m.name, author: m.authors?.[0]?.name || '', description: m.summary || '', downloads: m.downloadCount || 0, icon_url: m.logo?.url || '', url: m.links?.websiteUrl || '' })),
     total_hits: j.pagination?.totalCount || 0,
   }));
@@ -421,13 +426,13 @@ async function cfInstall(id, kind, modId, seen) {
   const d = kindDir(id, kind);
   const q = new URLSearchParams({ gameVersion: inst.version, pageSize: '50' });
   if (kind === 'mods' && CF_LOADER[inst.loader]) q.set('modLoaderType', String(CF_LOADER[inst.loader]));
-  const j = await cfJSON(`https://api.curseforge.com/v1/mods/${encodeURIComponent(modId)}/files?${q}`);
+  const j = await cfJSON(`/mods/${encodeURIComponent(modId)}/files?${q}`);
   const files = (j.data || []).filter(f => f.isAvailable !== false);
   if (!files.length) throw new Error(`No CurseForge file for Minecraft ${inst.version}${kind === 'mods' ? ' / ' + inst.loader : ''}`);
   const f = files.sort((a, b) => new Date(b.fileDate) - new Date(a.fileDate))[0];
   if (!f.downloadUrl) { // some authors forbid third-party downloads via the API
     let site = 'its CurseForge page';
-    try { site = (await cfJSON(`https://api.curseforge.com/v1/mods/${encodeURIComponent(modId)}`)).data?.links?.websiteUrl || site; } catch {}
+    try { site = (await cfJSON(`/mods/${encodeURIComponent(modId)}`)).data?.links?.websiteUrl || site; } catch {}
     throw new Error('This project blocks third-party downloads. Get it from ' + site);
   }
   const sha1 = (f.hashes || []).find(h => h.algo === 1)?.value;
