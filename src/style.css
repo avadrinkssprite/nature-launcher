@@ -158,7 +158,7 @@ select option { background: #172b55; }
 #dlgWorld { width: 480px; }
 #dlgWorld .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .dpSection { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
-.dpSection .opt { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.dpSection .opt, dialog label .opt { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--dim); }
 #dpList { list-style: none; margin: 0; padding: 0; max-height: 160px; overflow-y: auto; border: 1px solid rgba(238, 241, 248, .12); }
 #dpList li { display: flex; align-items: center; gap: 12px; padding: 7px 10px; border-bottom: 1px solid rgba(238, 241, 248, .06); }
 #dpList .name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

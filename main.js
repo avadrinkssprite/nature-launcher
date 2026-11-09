@@ -28,7 +28,7 @@ async function getJSON(url, body) {
 }
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const writeJSON = (f, o) => fs.writeFileSync(f, JSON.stringify(o, null, 2));
-const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, ...readJSON(CFG, {}) });
+const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, curseforgeKey: '', ...readJSON(CFG, {}) });
 const enc = s => safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s).toString('base64') : 'plain:' + s;
 const dec = s => s.startsWith('plain:') ? s.slice(6) : safeStorage.decryptString(Buffer.from(s, 'base64'));
 const send = (ch, ...a) => win?.webContents.send(ch, ...a);
@@ -384,6 +384,61 @@ async function install(id, kind, projectId, seen, isDep) {
 }
 h('mr:install', (id, kind, projectId) => install(id, kind, projectId, new Set(), false));
 
+// ---------- curseforge (needs the user's own API key from console.curseforge.com) ----------
+const CF_CLASS = { mods: 6, resourcepacks: 12, shaderpacks: 6552 };
+const CF_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }; // CurseForge modLoaderType ids
+async function cfJSON(url) {
+  const key = cfg().curseforgeKey;
+  if (!key) throw new Error('Add a CurseForge API key in Settings first');
+  const r = await fetch(url, { headers: { ...UA, 'x-api-key': key, Accept: 'application/json' } });
+  if (r.status === 401 || r.status === 403) throw new Error('CurseForge rejected the API key');
+  if (!r.ok) throw new Error(`CurseForge HTTP ${r.status}`);
+  return r.json();
+}
+h('cf:search', ({ id, query, kind, offset = 0 }) => {
+  if (!CF_CLASS[kind]) throw new Error('Bad content type');
+  const inst = readInst(id);
+  const p = new URLSearchParams({ gameId: '432', classId: String(CF_CLASS[kind]), gameVersion: inst.version, searchFilter: query || '', pageSize: '24', index: String(offset), sortField: '2', sortOrder: 'desc' });
+  if (kind === 'mods' && CF_LOADER[inst.loader]) p.set('modLoaderType', String(CF_LOADER[inst.loader]));
+  return cfJSON(`https://api.curseforge.com/v1/mods/search?${p}`).then(j => ({
+    hits: (j.data || []).map(m => ({ project_id: String(m.id), title: m.name, author: m.authors?.[0]?.name || '', description: m.summary || '', downloads: m.downloadCount || 0, icon_url: m.logo?.url || '', url: m.links?.websiteUrl || '' })),
+    total_hits: j.pagination?.totalCount || 0,
+  }));
+});
+h('cf:installed', id => {
+  const inst = readInst(id);
+  return Object.entries(inst.curseforge || {})
+    .filter(([, v]) => { const d = path.join(instDir(id), v.kind); return fs.existsSync(path.join(d, v.file)) || fs.existsSync(path.join(d, v.file + '.disabled')); })
+    .map(([k]) => k);
+});
+async function cfInstall(id, kind, modId, seen) {
+  if (seen.has(modId)) return;
+  seen.add(modId);
+  const inst = readInst(id);
+  inst.curseforge ||= {};
+  const d = kindDir(id, kind);
+  const q = new URLSearchParams({ gameVersion: inst.version, pageSize: '50' });
+  if (kind === 'mods' && CF_LOADER[inst.loader]) q.set('modLoaderType', String(CF_LOADER[inst.loader]));
+  const j = await cfJSON(`https://api.curseforge.com/v1/mods/${encodeURIComponent(modId)}/files?${q}`);
+  const files = (j.data || []).filter(f => f.isAvailable !== false);
+  if (!files.length) throw new Error(`No CurseForge file for Minecraft ${inst.version}${kind === 'mods' ? ' / ' + inst.loader : ''}`);
+  const f = files.sort((a, b) => new Date(b.fileDate) - new Date(a.fileDate))[0];
+  if (!f.downloadUrl) { // some authors forbid third-party downloads via the API
+    let site = 'its CurseForge page';
+    try { site = (await cfJSON(`https://api.curseforge.com/v1/mods/${encodeURIComponent(modId)}`)).data?.links?.websiteUrl || site; } catch {}
+    throw new Error('This project blocks third-party downloads. Get it from ' + site);
+  }
+  const sha1 = (f.hashes || []).find(h => h.algo === 1)?.value;
+  const prev = inst.curseforge[modId], name = path.basename(f.fileName);
+  await core.download(f.downloadUrl, path.join(d, name), sha1);
+  if (prev && prev.file !== name) fs.rmSync(path.join(d, path.basename(prev.file)), { force: true });
+  inst.curseforge[modId] = { kind, file: name, fileId: f.id };
+  saveInst(id, inst);
+  for (const dep of f.dependencies || [])
+    if (dep.relationType === 3 && dep.modId) await cfInstall(id, kind, String(dep.modId), seen); // 3 = required
+}
+h('cf:install', (id, kind, modId) => cfInstall(id, kind, String(modId), new Set()));
+
 // hashes every local file so manually added Modrinth files update too
 h('mr:updateAll', async id => {
   const inst = readInst(id);
@@ -416,7 +471,7 @@ const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.m
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();
-  for (const k of ['javaPath', 'memory', 'selected', 'discordRpc']) if (k in patch) c[k] = patch[k];
+  for (const k of ['javaPath', 'memory', 'selected', 'discordRpc', 'curseforgeKey']) if (k in patch) c[k] = patch[k];
   writeJSON(CFG, c);
   updatePresence();
   return publicCfg();

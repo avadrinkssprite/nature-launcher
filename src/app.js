@@ -138,33 +138,40 @@ panel.ondrop = async e => {
 // ---------- modrinth ----------
 let searchTimer;
 async function search(more) {
-  const i = cur(), kind = $('#mrKind').value;
+  const i = cur(), kind = $('#mrKind').value, cf = $('#mrSource').value === 'curseforge';
   if (!more) state.mr.offset = 0;
   $('#mrHint').textContent = kind === 'mods' && !modded(i) ? `${LOADER_NAMES[i.loader]} instance: results are not filtered by loader.`
     : kind === 'shaderpacks' ? shaderHint(i) : '';
-  const [res, installed] = await Promise.all([
-    act('mr:search', { id: i.id, query: $('#mrQuery').value, kind, offset: state.mr.offset }),
-    act('mr:installed', i.id),
-  ]);
+  let res, installed;
+  try {
+    [res, installed] = await Promise.all([
+      act(cf ? 'cf:search' : 'mr:search', { id: i.id, query: $('#mrQuery').value, kind, offset: state.mr.offset }),
+      act(cf ? 'cf:installed' : 'mr:installed', i.id),
+    ]);
+  } catch { if (!more) $('#mrList').innerHTML = ''; return; }
   const have = new Set(installed);
-  const html = res.hits.map(p =>
-    `<li>${p.icon_url ? `<img src="${esc(p.icon_url)}" alt="">` : '<span class="ph"></span>'}
-      <span class="t"><a href="https://modrinth.com/${esc(p.project_type)}/${esc(p.slug)}" target="_blank">${esc(p.title)}</a></span>
+  const html = res.hits.map(p => {
+    const url = p.url || `https://modrinth.com/${p.project_type}/${p.slug}`;
+    return `<li>${p.icon_url ? `<img src="${esc(p.icon_url)}" alt="">` : '<span class="ph"></span>'}
+      <span class="t"><a href="${esc(url)}" target="_blank">${esc(p.title)}</a></span>
       <button class="link ${have.has(p.project_id) ? '' : 'launch'}" data-id="${esc(p.project_id)}" data-kind="${kind}">${have.has(p.project_id) ? 'Reinstall' : 'Install'}</button>
       <span class="by">by ${esc(p.author)} · ${fmtNum(p.downloads)} downloads</span>
-      <span class="d">${esc(p.description)}</span></li>`).join('');
+      <span class="d">${esc(p.description)}</span></li>`;
+  }).join('');
   if (more) $('#mrList').insertAdjacentHTML('beforeend', html); else { $('#mrList').innerHTML = html || '<li class="hint">No results for this version.</li>'; $('#mrList').scrollTop = 0; }
   state.mr.offset += res.hits.length; state.mr.total = res.total_hits;
   $('#mrMore').hidden = state.mr.offset >= state.mr.total;
 }
 $('#mrQuery').oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => search(), 300); };
 $('#mrKind').onchange = () => search();
+$('#mrSource').onchange = () => search();
 $('#mrMore').onclick = () => search(true);
 $('#mrList').onclick = async e => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
+  const cf = $('#mrSource').value === 'curseforge';
   b.disabled = true; b.textContent = 'Installing…';
   try {
-    await act('mr:install', state.current, b.dataset.kind, b.dataset.id);
+    await act(cf ? 'cf:install' : 'mr:install', state.current, b.dataset.kind, b.dataset.id);
     b.textContent = 'Installed'; b.classList.remove('launch');
     toast(`Installed into ${b.dataset.kind} (with required dependencies)`);
   } catch { b.textContent = 'Install'; }
@@ -285,10 +292,10 @@ $('#dlgNew').onclose = async () => {
 
 // ---------- settings ----------
 const fSet = $('#formSettings');
-$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; $('#dlgSettings').showModal(); };
+$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; fSet.curseforgeKey.value = state.cfg.curseforgeKey || ''; $('#dlgSettings').showModal(); };
 $('#dlgSettings').onclose = async () => {
   if ($('#dlgSettings').returnValue !== 'ok') return;
-  state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked });
+  state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked, curseforgeKey: fSet.curseforgeKey.value.trim() });
   toast('Settings saved');
 };
 

@@ -58,7 +58,7 @@
         <button data-tab="mods" class="on">Mods</button>
         <button data-tab="resourcepacks">Resource packs</button>
         <button data-tab="shaderpacks">Shaders</button>
-        <button data-tab="browse">Browse Modrinth</button>
+        <button data-tab="browse">Browse Mods</button>
         <button data-tab="worlds">Worlds</button>
         <button data-tab="screenshots">Screenshots</button>
         <button data-tab="schematics" hidden>Schematics</button>
@@ -81,6 +81,10 @@
 
       <div class="panel" id="panelBrowse" hidden>
         <div class="toolbar">
+          <select id="mrSource" title="Search source">
+            <option value="modrinth">Modrinth</option>
+            <option value="curseforge">CurseForge</option>
+          </select>
           <select id="mrKind">
             <option value="mods">Mods</option>
             <option value="resourcepacks">Resource packs</option>
@@ -182,6 +186,7 @@
       <label>Java executable<input name="javaPath" placeholder="Automatic (downloads the right Java per version)"></label>
       <label>Max memory (GB)<input name="memory" type="number" min="1" max="64" step="1"></label>
       <label class="check" id="discordOpt"><input type="checkbox" name="discordRpc"> Show what I'm playing on Discord</label>
+      <label>CurseForge API key <span class="opt">(to browse CurseForge — get one free at console.curseforge.com)</span><input name="curseforgeKey" type="password" placeholder="Leave blank to use Modrinth only"></label>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
