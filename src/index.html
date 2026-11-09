@@ -81,16 +81,13 @@
 
       <div class="panel" id="panelBrowse" hidden>
         <div class="toolbar">
+          <button class="link" id="mrBack" title="Back">←</button>
+          <span id="mrKindLabel" class="label"></span>
           <select id="mrSource" title="Search source">
             <option value="modrinth">Modrinth</option>
             <option value="curseforge">CurseForge</option>
           </select>
-          <select id="mrKind">
-            <option value="mods">Mods</option>
-            <option value="resourcepacks">Resource packs</option>
-            <option value="shaderpacks">Shaders</option>
-          </select>
-          <input id="mrQuery" type="search" placeholder="Search Modrinth…" aria-label="Search Modrinth">
+          <input id="mrQuery" type="search" placeholder="Search…" aria-label="Search">
         </div>
         <div id="mrHint" class="hint"></div>
         <ul id="mrList" class="cards"></ul>

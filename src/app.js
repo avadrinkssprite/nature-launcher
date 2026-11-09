@@ -127,7 +127,7 @@ $('#updateAll').onclick = async () => {
 $('#addFiles').onclick = async () => { if (await act('content:add', state.current, state.tab)) loadLocal(); };
 $('#openKind').onclick = () => act('open', state.current, state.tab);
 // jump to Browse Mods for this content kind (keeps the Modrinth/CurseForge source choice)
-$('#getMore').onclick = () => { const kind = state.tab; showTab('browse'); $('#mrKind').value = kind; search(); };
+$('#getMore').onclick = () => { state.browseKind = state.tab; $('#mrQuery').value = ''; showTab('browse'); search(); };
 
 const panel = $('#panelLocal');
 panel.ondragover = e => { e.preventDefault(); panel.classList.add('dragging'); };
@@ -140,8 +140,10 @@ panel.ondrop = async e => {
 
 // ---------- modrinth ----------
 let searchTimer;
+const KIND_NAMES = { mods: 'Mods', resourcepacks: 'Resource packs', shaderpacks: 'Shaders' };
 async function search(more) {
-  const i = cur(), kind = $('#mrKind').value, cf = $('#mrSource').value === 'curseforge';
+  const i = cur(), kind = state.browseKind || 'mods', cf = $('#mrSource').value === 'curseforge';
+  $('#mrKindLabel').textContent = KIND_NAMES[kind];
   if (!more) state.mr.offset = 0;
   $('#mrHint').textContent = kind === 'mods' && !modded(i) ? `${LOADER_NAMES[i.loader]} instance: results are not filtered by loader.`
     : kind === 'shaderpacks' ? shaderHint(i) : '';
@@ -166,8 +168,8 @@ async function search(more) {
   $('#mrMore').hidden = state.mr.offset >= state.mr.total;
 }
 $('#mrQuery').oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => search(), 300); };
-$('#mrKind').onchange = () => search();
 $('#mrSource').onchange = () => search();
+$('#mrBack').onclick = () => showTab(state.browseKind || 'mods');
 $('#mrMore').onclick = () => search(true);
 $('#mrList').onclick = async e => {
   const b = e.target.closest('button[data-id]'); if (!b) return;
