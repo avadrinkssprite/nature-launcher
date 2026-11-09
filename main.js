@@ -389,16 +389,14 @@ const CF_CLASS = { mods: 6, resourcepacks: 12, shaderpacks: 6552 };
 const CF_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }; // CurseForge modLoaderType ids
 // Browser UA so Cloudflare lets the proxy through; path is the API suffix after /v1 (e.g. "/mods/search?…").
 const CF_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+// key set → CurseForge API directly; no key → api.curse.tools, a public proxy with Minecraft-approved access
+const cfFetch = (pathq, key) => fetch(key ? 'https://api.curseforge.com/v1' + pathq : 'https://api.curse.tools/v1/cf' + pathq,
+  { headers: key ? { ...UA, 'x-api-key': key, Accept: 'application/json' } : { 'User-Agent': CF_UA, Accept: 'application/json' } });
 async function cfJSON(pathq) {
   const key = (cfg().curseforgeKey || '').trim().replace(/^["']+|["']+$/g, ''); // drop stray quotes/spaces from pasting
-  // With no key, go through api.curse.tools, a public proxy with its own Minecraft-approved key.
-  // With a key, hit CurseForge directly (works only if that key is approved for Minecraft).
-  const url = key ? 'https://api.curseforge.com/v1' + pathq : 'https://api.curse.tools/v1/cf' + pathq;
-  const headers = key ? { ...UA, 'x-api-key': key, Accept: 'application/json' } : { 'User-Agent': CF_UA, Accept: 'application/json' };
-  const r = await fetch(url, { headers });
-  if (r.status === 401) throw new Error('CurseForge rejected the API key. Re-copy it from console.curseforge.com, or clear it to use the no-key proxy.');
-  // A valid personal key still gets 403 on gameId 432 (CurseForge allow-lists Minecraft per key).
-  if (r.status === 403 && key) throw new Error('This API key is not approved for Minecraft. Clear it in Settings to use the no-key CurseForge search instead.');
+  let r = await cfFetch(pathq, key);
+  // a key that isn't approved for Minecraft 401/403s — fall back to the no-key proxy so it still works
+  if (key && (r.status === 401 || r.status === 403)) r = await cfFetch(pathq, '');
   if (!r.ok) throw new Error(`CurseForge search unavailable (HTTP ${r.status})`);
   return r.json();
 }
