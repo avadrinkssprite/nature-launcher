@@ -28,7 +28,7 @@ async function getJSON(url, body) {
 }
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const writeJSON = (f, o) => fs.writeFileSync(f, JSON.stringify(o, null, 2));
-const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, curseforgeKey: '', ...readJSON(CFG, {}) });
+const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, ...readJSON(CFG, {}) });
 const enc = s => safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s).toString('base64') : 'plain:' + s;
 const dec = s => s.startsWith('plain:') ? s.slice(6) : safeStorage.decryptString(Buffer.from(s, 'base64'));
 const send = (ch, ...a) => win?.webContents.send(ch, ...a);
@@ -387,16 +387,11 @@ h('mr:install', (id, kind, projectId) => install(id, kind, projectId, new Set(),
 // ---------- curseforge (needs the user's own API key from console.curseforge.com) ----------
 const CF_CLASS = { mods: 6, resourcepacks: 12, shaderpacks: 6552 };
 const CF_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }; // CurseForge modLoaderType ids
-// Browser UA so Cloudflare lets the proxy through; path is the API suffix after /v1 (e.g. "/mods/search?…").
+// CurseForge data via api.curse.tools, a public proxy with Minecraft-approved access (no key needed).
+// Browser UA so Cloudflare lets it through; path is the API suffix after /v1 (e.g. "/mods/search?…").
 const CF_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-// key set → CurseForge API directly; no key → api.curse.tools, a public proxy with Minecraft-approved access
-const cfFetch = (pathq, key) => fetch(key ? 'https://api.curseforge.com/v1' + pathq : 'https://api.curse.tools/v1/cf' + pathq,
-  { headers: key ? { ...UA, 'x-api-key': key, Accept: 'application/json' } : { 'User-Agent': CF_UA, Accept: 'application/json' } });
 async function cfJSON(pathq) {
-  const key = (cfg().curseforgeKey || '').trim().replace(/^["']+|["']+$/g, ''); // drop stray quotes/spaces from pasting
-  let r = await cfFetch(pathq, key);
-  // a key that isn't approved for Minecraft 401/403s — fall back to the no-key proxy so it still works
-  if (key && (r.status === 401 || r.status === 403)) r = await cfFetch(pathq, '');
+  const r = await fetch('https://api.curse.tools/v1/cf' + pathq, { headers: { 'User-Agent': CF_UA, Accept: 'application/json' } });
   if (!r.ok) throw new Error(`CurseForge search unavailable (HTTP ${r.status})`);
   return r.json();
 }
@@ -476,7 +471,7 @@ const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.m
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();
-  for (const k of ['javaPath', 'memory', 'selected', 'discordRpc', 'curseforgeKey']) if (k in patch) c[k] = patch[k];
+  for (const k of ['javaPath', 'memory', 'selected', 'discordRpc']) if (k in patch) c[k] = patch[k];
   writeJSON(CFG, c);
   updatePresence();
   return publicCfg();

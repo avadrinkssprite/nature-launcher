@@ -297,10 +297,10 @@ $('#dlgNew').onclose = async () => {
 
 // ---------- settings ----------
 const fSet = $('#formSettings');
-$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; fSet.curseforgeKey.value = state.cfg.curseforgeKey || ''; $('#dlgSettings').showModal(); };
+$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; $('#dlgSettings').showModal(); };
 $('#dlgSettings').onclose = async () => {
   if ($('#dlgSettings').returnValue !== 'ok') return;
-  state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked, curseforgeKey: fSet.curseforgeKey.value.trim() });
+  state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked });
   toast('Settings saved');
 };
 
