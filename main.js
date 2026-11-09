@@ -388,10 +388,10 @@ h('mr:install', (id, kind, projectId) => install(id, kind, projectId, new Set(),
 const CF_CLASS = { mods: 6, resourcepacks: 12, shaderpacks: 6552 };
 const CF_LOADER = { forge: 1, fabric: 4, quilt: 5, neoforge: 6 }; // CurseForge modLoaderType ids
 async function cfJSON(url) {
-  const key = cfg().curseforgeKey;
+  const key = (cfg().curseforgeKey || '').trim().replace(/^["']+|["']+$/g, ''); // drop stray quotes/spaces from pasting
   if (!key) throw new Error('Add a CurseForge API key in Settings first');
   const r = await fetch(url, { headers: { ...UA, 'x-api-key': key, Accept: 'application/json' } });
-  if (r.status === 401 || r.status === 403) throw new Error('CurseForge rejected the API key');
+  if (r.status === 401 || r.status === 403) throw new Error('CurseForge rejected the API key. Re-copy it exactly from console.curseforge.com (no quotes or spaces).');
   if (!r.ok) throw new Error(`CurseForge HTTP ${r.status}`);
   return r.json();
 }
