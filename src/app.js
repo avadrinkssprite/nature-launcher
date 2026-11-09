@@ -84,6 +84,7 @@ async function loadLocal() {
   $('#localCount').textContent = `${items.length} files · ${on} enabled`;
   $('#localHint').textContent = kind === 'mods' && i.loader === 'vanilla' ? 'Vanilla instances ignore mods. Use a modded instance.'
     : kind === 'shaderpacks' ? shaderHint(i) : '';
+  $('#getMore').textContent = { mods: 'Download mods', resourcepacks: 'Download resource packs', shaderpacks: 'Download shaders' }[kind];
   $('#localList').innerHTML = items.length ? items.map(x =>
     `<li class="${x.enabled ? '' : 'off'}" data-file="${esc(x.file)}">
       <input type="checkbox" class="sw" ${x.enabled ? 'checked' : ''} aria-label="Enable ${esc(x.name)}">
@@ -125,6 +126,8 @@ $('#updateAll').onclick = async () => {
 };
 $('#addFiles').onclick = async () => { if (await act('content:add', state.current, state.tab)) loadLocal(); };
 $('#openKind').onclick = () => act('open', state.current, state.tab);
+// jump to Browse Mods for this content kind (keeps the Modrinth/CurseForge source choice)
+$('#getMore').onclick = () => { const kind = state.tab; showTab('browse'); $('#mrKind').value = kind; search(); };
 
 const panel = $('#panelLocal');
 panel.ondragover = e => { e.preventDefault(); panel.classList.add('dragging'); };
