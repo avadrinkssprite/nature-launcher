@@ -391,7 +391,9 @@ async function cfJSON(url) {
   const key = (cfg().curseforgeKey || '').trim().replace(/^["']+|["']+$/g, ''); // drop stray quotes/spaces from pasting
   if (!key) throw new Error('Add a CurseForge API key in Settings first');
   const r = await fetch(url, { headers: { ...UA, 'x-api-key': key, Accept: 'application/json' } });
-  if (r.status === 401 || r.status === 403) throw new Error('CurseForge rejected the API key. Re-copy it exactly from console.curseforge.com (no quotes or spaces).');
+  if (r.status === 401) throw new Error('CurseForge rejected the API key. Re-copy it from console.curseforge.com (no quotes or spaces).');
+  // A valid key still gets 403 on gameId 432: CurseForge allow-lists Minecraft access per key.
+  if (r.status === 403) throw new Error('CurseForge blocks Minecraft data for this API key. Minecraft (gameId 432) needs CurseForge-approved access — use Modrinth instead.');
   if (!r.ok) throw new Error(`CurseForge HTTP ${r.status}`);
   return r.json();
 }
