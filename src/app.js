@@ -351,13 +351,20 @@ $('#ltsBack').onclick = showOrders;
 async function loadOrders() {
   $('#ltsList').innerHTML = '<li class="empty">Loading…</li>';
   try {
-    const [me, page] = await Promise.all([act('localts:me').catch(() => null), act('localts:orders')]);
+    const [me, page, prods] = await Promise.all([act('localts:me').catch(() => null), act('localts:orders'), invoke('localts:products').catch(() => ({}))]);
     if (me) $('#ltsMe').textContent = `${me.username || 'Signed in'}${me.balance != null ? ` · ${me.balance} credits` : ''}`;
+    // orders only carry a productId; name and logo come from the product list (like the Localts app)
+    const byId = Object.fromEntries((prods.products || []).map(p => [p.id, p]));
+    const logo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (u.startsWith('/') ? '' : '/') + u;
+    const shortId = id => String(id).length > 10 ? String(id).slice(0, 4) + '…' + String(id).slice(-4) : id;
     const orders = page.orders || [];
     $('#ltsList').innerHTML = orders.length ? orders.map(o => {
+      const p = byId[o.productId] || {};
       const ms = o.timestamp ? (o.timestamp > 1e12 ? o.timestamp : o.timestamp * 1000) : 0;
-      return `<li data-order="${esc(o.id)}"><button type="button" class="name" style="text-align:left">${esc(o.productType || o.productId || 'Order')}</button>
-        <span class="size">${ms ? new Date(ms).toLocaleDateString() : ''}</span></li>`;
+      const img = logo(p.logoUrl);
+      return `<li data-order="${esc(o.id)}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
+        <button type="button" class="name" style="text-align:left">${esc(p.name || 'Order')} <span style="color:var(--dim)">#${esc(shortId(o.id))}</span></button>
+        <span class="size" style="width:auto">${ms ? new Date(ms).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</span></li>`;
     }).join('') : '<li class="empty">No orders yet</li>';
   } catch { $('#ltsList').innerHTML = '<li class="empty">Couldn\'t load orders</li>'; }
 }

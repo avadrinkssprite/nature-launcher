@@ -596,6 +596,7 @@ h('localts:key', key => {
   return publicCfg();
 });
 h('localts:me', () => ltsGet('/me'));
+h('localts:products', () => ltsGet('/products'));
 h('localts:orders', (page = 0) => ltsGet(`/orders?page=${page | 0}&size=50`));
 h('localts:order', id => ltsGet('/orders/get-order?id=' + encodeURIComponent(String(id))));
 h('localts:import', async content => {
