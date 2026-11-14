@@ -633,26 +633,29 @@ h('launch', async id => {
     writeJSON(CFG, c);
     auth = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
   } else if (acc.type === 'token') {
-    let renewed = null;
-    if (acc.refresh) {
-      try {
-        log('Renewing session…');
-        if (acc.lts) { // Localts refresh token: msmc can't use it, so run the Localts login chain
-          const s = await ltsLogin(dec(acc.refresh));
-          acc.token = enc(s.token); acc.refresh = enc(s.refresh); acc.name = s.name; acc.uuid = s.uuid;
-          writeJSON(CFG, c);
-          renewed = { name: s.name, uuid: s.uuid, token: s.token, type: 'msa' };
-        } else {
-          const xbox = await new Auth('select_account').refresh(dec(acc.refresh));
-          const mc = (await xbox.getMinecraft()).mclc();
-          acc.token = enc(mc.access_token); acc.refresh = enc(xbox.save()); acc.name = mc.name; acc.uuid = mc.uuid;
-          writeJSON(CFG, c);
-          renewed = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
-        }
-      } catch (e) { log('Auto-renew failed, using the stored session token: ' + e.message); }
-    }
-    // no refresh token, or renewal failed: use the stored session token as-is (expires on its own)
-    auth = renewed || { name: acc.name, uuid: acc.uuid, token: dec(acc.token), type: 'msa' };
+    // default to the stored session token; only renew from the refresh token if it's dead
+    let live = false;
+    try {
+      log('Checking session token…');
+      const r = await fetch('https://api.minecraftservices.com/minecraft/profile', { headers: { ...UA, Authorization: 'Bearer ' + dec(acc.token) } });
+      live = r.ok;
+    } catch {}
+    if (live) auth = { name: acc.name, uuid: acc.uuid, token: dec(acc.token), type: 'msa' };
+    else if (acc.refresh) {
+      log('Session token expired, renewing…');
+      if (acc.lts) { // Localts refresh token: msmc can't use it, so run the Localts login chain
+        const s = await ltsLogin(dec(acc.refresh));
+        acc.token = enc(s.token); acc.refresh = enc(s.refresh); acc.name = s.name; acc.uuid = s.uuid;
+        writeJSON(CFG, c);
+        auth = { name: s.name, uuid: s.uuid, token: s.token, type: 'msa' };
+      } else {
+        const xbox = await new Auth('select_account').refresh(dec(acc.refresh));
+        const mc = (await xbox.getMinecraft()).mclc();
+        acc.token = enc(mc.access_token); acc.refresh = enc(xbox.save()); acc.name = mc.name; acc.uuid = mc.uuid;
+        writeJSON(CFG, c);
+        auth = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+      }
+    } else auth = { name: acc.name, uuid: acc.uuid, token: dec(acc.token), type: 'msa' }; // no refresh: use as-is
   } else auth = { name: acc.name, uuid: core.offlineUUID(acc.name), token: '0', type: 'legacy' };
 
   inst.lastPlayed = Date.now();
