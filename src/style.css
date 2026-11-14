@@ -57,6 +57,7 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
   display: flex; justify-content: flex-end; align-items: center; gap: 18px; -webkit-app-region: drag;
 }
 .icon { -webkit-app-region: no-drag; opacity: .8; display: grid; }
+.icon[hidden] { display: none; }
 .icon:hover { opacity: 1; color: var(--warm); }
 .icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 

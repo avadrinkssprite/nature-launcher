@@ -48,7 +48,11 @@ function kindDir(id, kind) {
   return d;
 }
 
-const h = (ch, fn) => ipcMain.handle(ch, (_e, ...a) => fn(...a));
+// msmc throws plain strings/objects, which reach the renderer as "[object Object]"; make them Errors
+const h = (ch, fn) => ipcMain.handle(ch, async (_e, ...a) => {
+  try { return await fn(...a); }
+  catch (e) { throw e instanceof Error ? e : new Error(typeof e === 'string' ? e : e?.ts ? `${e.ts} (HTTP ${e.response?.status})` : JSON.stringify(e)); }
+});
 
 // ---------- versions & instances ----------
 h('versions', async () => {
@@ -548,8 +552,31 @@ h('acc:remove', id => {
 });
 
 // ---------- Localts (localts.store) ----------
-// Orders hold a Microsoft OAuth refresh token (same client_id/scope msmc uses), so an
-// imported account is just a normal 'ms' account seeded from that token.
+// Order items hold an old-style Live refresh token (MBI_SSL scope). msmc can't use it: its Xbox step
+// sends the ticket as "d=", these need "t=". So Localts accounts get their own login chain, the same
+// one the Localts app runs, on import and on every launch.
+async function ltsLogin(refresh) {
+  const post = async (url, body, form) => {
+    const r = await fetch(url, { method: 'POST', body: form ? new URLSearchParams(body) : JSON.stringify(body),
+      headers: { ...UA, Accept: 'application/json', 'Content-Type': form ? 'application/x-www-form-urlencoded' : 'application/json' } });
+    return { r, d: await r.json().catch(() => ({})) };
+  };
+  const ms = await post('https://login.live.com/oauth20_token.srf', { client_id: '00000000402b5328', grant_type: 'refresh_token', refresh_token: refresh,
+    redirect_uri: 'https://login.live.com/oauth20_desktop.srf', scope: 'service::user.auth.xboxlive.com::MBI_SSL' }, true);
+  if (!ms.r.ok) throw new Error('Microsoft rejected the token: ' + (ms.d.error_description || ms.d.error || 'HTTP ' + ms.r.status));
+  const xbl = await post('https://user.auth.xboxlive.com/user/authenticate', { Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: 't=' + ms.d.access_token }, RelyingParty: 'http://auth.xboxlive.com', TokenType: 'JWT' });
+  if (!xbl.r.ok) throw new Error(`Xbox Live login failed (HTTP ${xbl.r.status})`);
+  const xsts = await post('https://xsts.auth.xboxlive.com/xsts/authorize', { Properties: { SandboxId: 'RETAIL', UserTokens: [xbl.d.Token] }, RelyingParty: 'rp://api.minecraftservices.com/', TokenType: 'JWT' });
+  if (!xsts.r.ok) throw new Error(xsts.d.XErr === 2148916233 ? 'This Microsoft account has no Xbox profile' : `Xbox security token failed (HTTP ${xsts.r.status}${xsts.d.XErr ? ', XErr ' + xsts.d.XErr : ''})`);
+  const mc = await post('https://api.minecraftservices.com/authentication/login_with_xbox', { identityToken: `XBL3.0 x=${xsts.d.DisplayClaims.xui[0].uhs};${xsts.d.Token}` });
+  if (mc.r.status === 429) throw new Error('Minecraft login is rate limited, try again in a moment');
+  if (!mc.r.ok) throw new Error(`Minecraft login failed (HTTP ${mc.r.status})`);
+  const p = await fetch('https://api.minecraftservices.com/minecraft/profile', { headers: { ...UA, Authorization: 'Bearer ' + mc.d.access_token } });
+  if (!p.ok) throw new Error(p.status === 404 ? "This account doesn't own Minecraft" : `Profile lookup failed (HTTP ${p.status})`);
+  const prof = await p.json();
+  return { name: prof.name, uuid: prof.id, token: mc.d.access_token, refresh: ms.d.refresh_token || refresh }; // Microsoft rotates the refresh token
+}
+
 const localtsKey = () => { const c = cfg(); return c.localtsKey ? dec(c.localtsKey) : ''; };
 async function ltsGet(ep) {
   const key = localtsKey();
@@ -574,15 +601,14 @@ h('localts:order', id => ltsGet('/orders/get-order?id=' + encodeURIComponent(Str
 h('localts:import', async content => {
   content = String(content || '').trim();
   if (!content) throw new Error('This order item has no token to import');
-  const xbox = await new Auth('select_account').refresh(content);
-  const mc = await xbox.getMinecraft();
+  const s = await ltsLogin(content);
   const c = cfg();
-  c.accounts = c.accounts.filter(a => a.id !== mc.profile.id);
-  c.accounts.push({ id: mc.profile.id, type: 'ms', name: mc.profile.name, refresh: enc(xbox.save()) });
-  c.selected = mc.profile.id;
+  c.accounts = c.accounts.filter(a => a.id !== s.uuid);
+  c.accounts.push({ id: s.uuid, type: 'lts', name: s.name, refresh: enc(s.refresh) });
+  c.selected = s.uuid;
   writeJSON(CFG, c);
   updatePresence();
-  return { cfg: publicCfg(), name: mc.profile.name };
+  return { cfg: publicCfg(), name: s.name };
 });
 
 // ---------- launch ----------
@@ -603,6 +629,12 @@ h('launch', async id => {
     acc.refresh = enc(xbox.save());
     writeJSON(CFG, c);
     auth = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+  } else if (acc.type === 'lts') {
+    log('Refreshing Localts account…');
+    const s = await ltsLogin(dec(acc.refresh));
+    acc.refresh = enc(s.refresh); acc.name = s.name;
+    writeJSON(CFG, c);
+    auth = { name: s.name, uuid: s.uuid, token: s.token, type: 'msa' };
   } else if (acc.type === 'token') {
     let renewed = null;
     if (acc.refresh) {
