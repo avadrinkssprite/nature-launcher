@@ -142,6 +142,7 @@ h('instance:delete', id => {
   fs.rmSync(instDir(id), { recursive: true, force: true });
 });
 h('open', (id, kind) => shell.openPath(id ? (kind ? kindDir(id, kind) : instDir(id)) : DATA));
+h('open:version', id => { const inst = readInst(id); if (inst.loader !== 'custom' || !inst.customId) throw new Error('Not a custom instance'); return shell.openPath(core.vdir(path.basename(inst.customId))); });
 
 // ---------- local content ----------
 h('content:list', (id, kind) => {

@@ -47,6 +47,7 @@ function renderInstance() {
   if (!i) return;
   $('#instName').textContent = i.name;
   $('#instMeta').textContent = `Minecraft ${i.version} · ${loaderLabel(i)}${i.modpack ? ' · ' + i.modpack.name : ''}`;
+  $('#instVersion').hidden = i.loader !== 'custom';
   $('#launchBtn').disabled = state.running.has(i.id);
   $('#launchBtn').textContent = state.running.has(i.id) ? 'Running' : 'Launch →';
   $('#log').textContent = state.logs[i.id] || 'No output yet.';
@@ -206,6 +207,7 @@ on('started', () => { $('#progress').hidden = true; toast('Game starting…'); }
 on('closed', (id, code) => { state.running.delete(id); $('#progress').hidden = true; renderInstance(); toast(`Game closed (exit ${code})`, code !== 0); });
 
 // ---------- instance actions ----------
+$('#instVersion').onclick = () => act('open:version', state.current);
 $('#instFolder').onclick = () => act('open', state.current);
 $('#instDelete').onclick = async () => {
   const i = cur();
