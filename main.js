@@ -600,8 +600,10 @@ h('localts:orders', (page = 0) => ltsGet(`/orders?page=${page | 0}&size=50`));
 h('localts:order', id => ltsGet('/orders/get-order?id=' + encodeURIComponent(String(id))));
 h('localts:import', async content => {
   content = String(content || '').trim();
-  if (!content) throw new Error('This order item has no token to import');
-  const s = await ltsLogin(content);
+  const i = content.indexOf(':'); // item content is "username:refreshToken" (split like the Localts app does)
+  const token = i >= 0 ? content.slice(i + 1).trim() : content;
+  if (!token) throw new Error('This order item has no token to import');
+  const s = await ltsLogin(token);
   const c = cfg();
   c.accounts = c.accounts.filter(a => a.id !== s.uuid);
   c.accounts.push({ id: s.uuid, type: 'lts', name: s.name, refresh: enc(s.refresh) });

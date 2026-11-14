@@ -368,9 +368,10 @@ async function loadOrder(id) {
   try {
     const o = await act('localts:order', id);
     const items = (o.items || []).filter(it => it.content);
-    const label = o['product-name'] || o.productName || 'Account';
+    $('#ltsTitle').textContent = o['product-name'] || o.productName || 'Order';
+    const nameOf = c => c.indexOf(':') > 0 ? c.slice(0, c.indexOf(':')) : 'Account'; // content is "username:refreshToken"
     $('#ltsList').innerHTML = items.length ? items.map((it, i) =>
-      `<li data-content="${esc(it.content)}"><span class="name">${esc(label)}${items.length > 1 ? ' #' + (i + 1) : ''}</span>
+      `<li data-content="${esc(it.content)}"><span class="name"><span style="color:var(--dim)">#${i + 1}</span> ${esc(nameOf(it.content))}</span>
         <button type="button" class="link import">Import →</button></li>`).join('')
       : '<li class="empty">Nothing to import in this order</li>';
   } catch { $('#ltsList').innerHTML = '<li class="empty">Couldn\'t load this order</li>'; }
