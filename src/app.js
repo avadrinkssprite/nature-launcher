@@ -409,8 +409,9 @@ async function loadShop() {
     const items = prods.products || [];
     $('#shopList').innerHTML = items.length ? items.map(p => {
       const img = ltsLogo(p.logoUrl), out = p.stock === 0;
-      return `<li data-id="${esc(p.id)}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
-        <span class="name" title="${esc(p.name || 'Product')}">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr${p.stock != null ? ` · ${out ? 'out of stock' : p.stock + ' in stock'}` : ''}</span></span>
+      return `<li data-id="${esc(p.id)}" data-name="${esc(p.name || 'Product')}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
+        <span class="name">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr</span></span>
+        <span class="stock" title="In stock">${p.stock != null ? p.stock : '—'}</span>
         <span class="cost">${p.priceInCredits} cr</span>
         <button type="button" class="link buy"${out ? ' disabled' : ''}>Buy →</button></li>`;
     }).join('') : '<li class="empty">No products</li>';
