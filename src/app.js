@@ -408,11 +408,11 @@ async function loadShop() {
     if (me) $('#shopMe').textContent = `${me.username || 'Signed in'}${me.balance != null ? ` · ${me.balance} credits` : ''}`;
     const items = prods.products || [];
     $('#shopList').innerHTML = items.length ? items.map(p => {
-      const img = ltsLogo(p.logoUrl), out = p.stock === 0;
+      const img = ltsLogo(p.logoUrl), out = p.stock === 0, qty = p.stock ? Math.max(1, p.stock) : 1;
       return `<li data-id="${esc(p.id)}" data-price="${+p.priceInCredits || 0}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
         <span class="name" title="${esc(p.name || 'Product')}">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr each${p.stock != null ? ` · ${out ? 'out of stock' : p.stock + ' left'}` : ''}</span></span>
-        <input class="qty" type="number" min="1" value="1"${p.stock ? ` max="${p.stock}"` : ''} aria-label="Quantity"${out ? ' disabled' : ''}>
-        <span class="cost">${p.priceInCredits} cr</span>
+        <input class="qty" type="number" min="1" value="${qty}"${p.stock ? ` max="${p.stock}"` : ''} aria-label="Quantity"${out ? ' disabled' : ''}>
+        <span class="cost">${(+p.priceInCredits || 0) * qty} cr</span>
         <button type="button" class="link buy"${out ? ' disabled' : ''}>Buy →</button></li>`;
     }).join('') : '<li class="empty">No products</li>';
   } catch { $('#shopList').innerHTML = '<li class="empty">Couldn\'t load products</li>'; }
