@@ -604,10 +604,10 @@ h('localts:import', async content => {
   const i = content.indexOf(':'); // item content is "username:refreshToken" (split like the Localts app does)
   const token = i >= 0 ? content.slice(i + 1).trim() : content;
   if (!token) throw new Error('This order item has no token to import');
-  const s = await ltsLogin(token);
+  const s = await ltsLogin(token); // mint a session token now; store it plus the refresh token for auto-renewal
   const c = cfg();
   c.accounts = c.accounts.filter(a => a.id !== s.uuid);
-  c.accounts.push({ id: s.uuid, type: 'lts', name: s.name, refresh: enc(s.refresh) });
+  c.accounts.push({ id: s.uuid, type: 'token', name: s.name, uuid: s.uuid, token: enc(s.token), refresh: enc(s.refresh), lts: true });
   c.selected = s.uuid;
   writeJSON(CFG, c);
   updatePresence();
@@ -632,22 +632,23 @@ h('launch', async id => {
     acc.refresh = enc(xbox.save());
     writeJSON(CFG, c);
     auth = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
-  } else if (acc.type === 'lts') {
-    log('Refreshing Localts account…');
-    const s = await ltsLogin(dec(acc.refresh));
-    acc.refresh = enc(s.refresh); acc.name = s.name;
-    writeJSON(CFG, c);
-    auth = { name: s.name, uuid: s.uuid, token: s.token, type: 'msa' };
   } else if (acc.type === 'token') {
     let renewed = null;
     if (acc.refresh) {
       try {
         log('Renewing session…');
-        const xbox = await new Auth('select_account').refresh(dec(acc.refresh));
-        const mc = (await xbox.getMinecraft()).mclc();
-        acc.token = enc(mc.access_token); acc.refresh = enc(xbox.save()); acc.name = mc.name; acc.uuid = mc.uuid;
-        writeJSON(CFG, c);
-        renewed = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+        if (acc.lts) { // Localts refresh token: msmc can't use it, so run the Localts login chain
+          const s = await ltsLogin(dec(acc.refresh));
+          acc.token = enc(s.token); acc.refresh = enc(s.refresh); acc.name = s.name; acc.uuid = s.uuid;
+          writeJSON(CFG, c);
+          renewed = { name: s.name, uuid: s.uuid, token: s.token, type: 'msa' };
+        } else {
+          const xbox = await new Auth('select_account').refresh(dec(acc.refresh));
+          const mc = (await xbox.getMinecraft()).mclc();
+          acc.token = enc(mc.access_token); acc.refresh = enc(xbox.save()); acc.name = mc.name; acc.uuid = mc.uuid;
+          writeJSON(CFG, c);
+          renewed = { name: mc.name, uuid: mc.uuid, token: mc.access_token, xuid: mc.meta?.xuid, type: 'msa' };
+        }
       } catch (e) { log('Auto-renew failed, using the stored session token: ' + e.message); }
     }
     // no refresh token, or renewal failed: use the stored session token as-is (expires on its own)
