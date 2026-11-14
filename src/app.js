@@ -299,12 +299,17 @@ $('#dlgNew').onclose = async () => {
 
 // ---------- settings ----------
 const fSet = $('#formSettings');
-$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; $('#dlgSettings').showModal(); };
+const LTS_MASK = '••••••••••••'; // shown when a key is already saved; unchanged means "leave the key as-is"
+$('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; fSet.localtsKey.value = state.cfg.hasLocalts ? LTS_MASK : ''; $('#dlgSettings').showModal(); };
 $('#dlgSettings').onclose = async () => {
   if ($('#dlgSettings').returnValue !== 'ok') return;
   state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked });
+  if (fSet.localtsKey.value !== LTS_MASK) state.cfg = await act('localts:key', fSet.localtsKey.value.trim());
+  applyCfg();
   toast('Settings saved');
 };
+// show the Orders button only when a Localts key is set
+function applyCfg() { $('#ltsBtn').hidden = !state.cfg.hasLocalts; }
 
 // ---------- accounts ----------
 function renderAccounts() {
@@ -337,6 +342,52 @@ $('#tokAdd').onclick = async () => {
     renderAccounts(); toast('Account added');
   } catch {}
   b.disabled = false;
+};
+
+// ---------- Localts orders ----------
+const showOrders = () => { $('#ltsBack').hidden = true; $('#ltsTitle').textContent = 'Localts orders'; loadOrders(); };
+$('#ltsBtn').onclick = () => { $('#ltsMe').textContent = ''; showOrders(); $('#dlgLts').showModal(); };
+$('#ltsBack').onclick = showOrders;
+async function loadOrders() {
+  $('#ltsList').innerHTML = '<li class="empty">Loading…</li>';
+  try {
+    const [me, page] = await Promise.all([act('localts:me').catch(() => null), act('localts:orders')]);
+    if (me) $('#ltsMe').textContent = `${me.username || 'Signed in'}${me.balance != null ? ` · ${me.balance} credits` : ''}`;
+    const orders = page.orders || [];
+    $('#ltsList').innerHTML = orders.length ? orders.map(o => {
+      const ms = o.timestamp ? (o.timestamp > 1e12 ? o.timestamp : o.timestamp * 1000) : 0;
+      return `<li data-order="${esc(o.id)}"><button type="button" class="name" style="text-align:left">${esc(o.productType || o.productId || 'Order')}</button>
+        <span class="size">${ms ? new Date(ms).toLocaleDateString() : ''}</span></li>`;
+    }).join('') : '<li class="empty">No orders yet</li>';
+  } catch { $('#ltsList').innerHTML = '<li class="empty">Couldn\'t load orders</li>'; }
+}
+async function loadOrder(id) {
+  $('#ltsBack').hidden = false;
+  $('#ltsTitle').textContent = 'Order';
+  $('#ltsList').innerHTML = '<li class="empty">Loading…</li>';
+  try {
+    const o = await act('localts:order', id);
+    const items = (o.items || []).filter(it => it.content);
+    const label = o['product-name'] || o.productName || 'Account';
+    $('#ltsList').innerHTML = items.length ? items.map((it, i) =>
+      `<li data-content="${esc(it.content)}"><span class="name">${esc(label)}${items.length > 1 ? ' #' + (i + 1) : ''}</span>
+        <button type="button" class="link import">Import →</button></li>`).join('')
+      : '<li class="empty">Nothing to import in this order</li>';
+  } catch { $('#ltsList').innerHTML = '<li class="empty">Couldn\'t load this order</li>'; }
+}
+$('#ltsList').onclick = async e => {
+  const imp = e.target.closest('.import');
+  if (imp) {
+    const li = e.target.closest('li[data-content]');
+    imp.disabled = true; imp.textContent = 'Importing…';
+    try {
+      const r = await act('localts:import', li.dataset.content);
+      state.cfg = r.cfg; renderAccounts(); toast('Imported ' + r.name); imp.textContent = 'Imported ✓';
+    } catch { imp.disabled = false; imp.textContent = 'Import →'; }
+    return;
+  }
+  const li = e.target.closest('li[data-order]');
+  if (li) loadOrder(li.dataset.order);
 };
 
 // ---------- worlds ----------
@@ -583,5 +634,6 @@ $('#shotGrid').onclick = async e => {
 (async () => {
   state.cfg = await act('cfg:get');
   renderAccounts();
+  applyCfg();
   loadInstances();
 })();

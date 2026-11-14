@@ -27,6 +27,10 @@
     <button class="icon" id="openData" title="Open launcher folder">
       <svg viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/></svg>
     </button>
+    <button class="icon" id="ltsBtn" title="Localts orders" hidden>
+      <!-- receipt icon from Lucide (ISC license) -->
+      <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/></svg>
+    </button>
     <button class="icon" id="settingsBtn" title="Settings">
       <!-- gear icon from Lucide (ISC license) -->
       <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -184,6 +188,7 @@
       <label>Java executable<input name="javaPath" placeholder="Automatic (downloads the right Java per version)"></label>
       <label>Max memory (GB)<input name="memory" type="number" min="1" max="64" step="1"></label>
       <label class="check" id="discordOpt"><input type="checkbox" name="discordRpc"> Show what I'm playing on Discord</label>
+      <label>Localts API key <span class="opt">(for importing accounts from orders)</span><input name="localtsKey" type="password" placeholder="Leave blank to hide the Orders button"></label>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
@@ -200,6 +205,16 @@
         <label>Refresh token <span class="opt">(optional, for auto-renewal)</span><input id="tokRefresh" type="password" placeholder="Leave blank if you don't have one"></label>
         <button type="button" id="tokAdd" class="link launch">Add account →</button>
       </details>
+      <div class="row"><button value="close" class="link">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgLts">
+    <form method="dialog">
+      <h2 id="ltsTitle">Localts orders</h2>
+      <p class="hint" id="ltsMe"></p>
+      <button type="button" id="ltsBack" class="link" hidden>← All orders</button>
+      <ul id="ltsList" class="list"></ul>
       <div class="row"><button value="close" class="link">Close</button></div>
     </form>
   </dialog>

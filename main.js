@@ -28,7 +28,7 @@ async function getJSON(url, body) {
 }
 const readJSON = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const writeJSON = (f, o) => fs.writeFileSync(f, JSON.stringify(o, null, 2));
-const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, ...readJSON(CFG, {}) });
+const cfg = () => ({ javaPath: '', memory: 4, accounts: [], selected: null, discordRpc: true, localtsKey: '', ...readJSON(CFG, {}) });
 const enc = s => safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(s).toString('base64') : 'plain:' + s;
 const dec = s => s.startsWith('plain:') ? s.slice(6) : safeStorage.decryptString(Buffer.from(s, 'base64'));
 const send = (ch, ...a) => win?.webContents.send(ch, ...a);
@@ -468,7 +468,8 @@ h('mr:updateAll', async id => {
 });
 
 // ---------- settings & accounts ----------
-const publicCfg = () => { const c = cfg(); return { ...c, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
+// strip secrets before sending config to the renderer: account tokens and the Localts API key
+const publicCfg = () => { const { localtsKey, ...c } = cfg(); return { ...c, hasLocalts: !!localtsKey, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();
@@ -544,6 +545,44 @@ h('acc:remove', id => {
   if (c.selected === id) c.selected = c.accounts[0]?.id || null;
   writeJSON(CFG, c);
   return publicCfg();
+});
+
+// ---------- Localts (localts.store) ----------
+// Orders hold a Microsoft OAuth refresh token (same client_id/scope msmc uses), so an
+// imported account is just a normal 'ms' account seeded from that token.
+const localtsKey = () => { const c = cfg(); return c.localtsKey ? dec(c.localtsKey) : ''; };
+async function ltsGet(ep) {
+  const key = localtsKey();
+  if (!key) throw new Error('Add your Localts API key in Settings first');
+  const r = await fetch('https://localts.store/v1' + ep, { headers: { ...UA, 'X-API-Key': key } });
+  const body = await r.json().catch(() => ({}));
+  if (r.status === 401) throw new Error('Localts rejected the API key');
+  if (!r.ok || body.success === false) throw new Error(body.error || body.message || `Localts request failed (HTTP ${r.status})`);
+  return body;
+}
+
+h('localts:key', key => {
+  key = String(key || '').trim();
+  const c = cfg();
+  c.localtsKey = key ? enc(key) : '';
+  writeJSON(CFG, c);
+  return publicCfg();
+});
+h('localts:me', () => ltsGet('/me'));
+h('localts:orders', (page = 0) => ltsGet(`/orders?page=${page | 0}&size=50`));
+h('localts:order', id => ltsGet('/orders/get-order?id=' + encodeURIComponent(String(id))));
+h('localts:import', async content => {
+  content = String(content || '').trim();
+  if (!content) throw new Error('This order item has no token to import');
+  const xbox = await new Auth('select_account').refresh(content);
+  const mc = await xbox.getMinecraft();
+  const c = cfg();
+  c.accounts = c.accounts.filter(a => a.id !== mc.profile.id);
+  c.accounts.push({ id: mc.profile.id, type: 'ms', name: mc.profile.name, refresh: enc(xbox.save()) });
+  c.selected = mc.profile.id;
+  writeJSON(CFG, c);
+  updatePresence();
+  return { cfg: publicCfg(), name: mc.profile.name };
 });
 
 // ---------- launch ----------
