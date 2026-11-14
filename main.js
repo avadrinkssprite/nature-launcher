@@ -578,10 +578,10 @@ async function ltsLogin(refresh) {
 }
 
 const localtsKey = () => { const c = cfg(); return c.localtsKey ? dec(c.localtsKey) : ''; };
-async function ltsGet(ep) {
+async function ltsGet(ep, method = 'GET') {
   const key = localtsKey();
   if (!key) throw new Error('Add your Localts API key in Settings first');
-  const r = await fetch('https://localts.store/v1' + ep, { headers: { ...UA, 'X-API-Key': key } });
+  const r = await fetch('https://localts.store/v1' + ep, { method, headers: { ...UA, 'X-API-Key': key } });
   const body = await r.json().catch(() => ({}));
   if (r.status === 401) throw new Error('Localts rejected the API key');
   if (!r.ok || body.success === false) throw new Error(body.error || body.message || `Localts request failed (HTTP ${r.status})`);
@@ -597,6 +597,13 @@ h('localts:key', key => {
 });
 h('localts:me', () => ltsGet('/me'));
 h('localts:products', () => ltsGet('/products'));
+h('localts:purchase', async ({ id, amount }) => {
+  id = String(id || '');
+  amount = Math.max(1, amount | 0);
+  if (!id) throw new Error('No product selected');
+  const r = await ltsGet(`/products/${encodeURIComponent(id)}/purchase?amount=${amount}`, 'POST');
+  return { orderId: r.orderId || r['order-id'] || null };
+});
 h('localts:orders', (page = 0) => ltsGet(`/orders?page=${page | 0}&size=50`));
 h('localts:order', id => ltsGet('/orders/get-order?id=' + encodeURIComponent(String(id))));
 h('localts:import', async content => {

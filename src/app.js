@@ -308,8 +308,10 @@ $('#dlgSettings').onclose = async () => {
   applyCfg();
   toast('Settings saved');
 };
-// show the Orders button only when a Localts key is set
-function applyCfg() { $('#ltsBtn').hidden = !state.cfg.hasLocalts; }
+// show the Orders/Shop buttons only when a Localts key is set
+function applyCfg() { $('#ltsBtn').hidden = $('#shopBtn').hidden = !state.cfg.hasLocalts; }
+// Localts logo urls can be relative to the site
+const ltsLogo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (u.startsWith('/') ? '' : '/') + u;
 
 // ---------- accounts ----------
 function renderAccounts() {
@@ -355,13 +357,12 @@ async function loadOrders() {
     if (me) $('#ltsMe').textContent = `${me.username || 'Signed in'}${me.balance != null ? ` · ${me.balance} credits` : ''}`;
     // orders only carry a productId; name and logo come from the product list (like the Localts app)
     const byId = Object.fromEntries((prods.products || []).map(p => [p.id, p]));
-    const logo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (u.startsWith('/') ? '' : '/') + u;
     const shortId = id => String(id).length > 10 ? String(id).slice(0, 4) + '…' + String(id).slice(-4) : id;
     const orders = page.orders || [];
     $('#ltsList').innerHTML = orders.length ? orders.map(o => {
       const p = byId[o.productId] || {};
       const ms = o.timestamp ? (o.timestamp > 1e12 ? o.timestamp : o.timestamp * 1000) : 0;
-      const img = logo(p.logoUrl);
+      const img = ltsLogo(p.logoUrl);
       return `<li data-order="${esc(o.id)}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
         <button type="button" class="name" style="text-align:left">${esc(p.name || 'Order')} <span style="color:var(--dim)">#${esc(shortId(o.id))}</span></button>
         <span class="size" style="width:auto">${ms ? new Date(ms).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : ''}</span></li>`;
@@ -396,6 +397,35 @@ $('#ltsList').onclick = async e => {
   }
   const li = e.target.closest('li[data-order]');
   if (li) loadOrder(li.dataset.order);
+};
+
+// ---------- Localts shop ----------
+$('#shopBtn').onclick = () => { $('#shopMe').textContent = ''; loadShop(); $('#dlgShop').showModal(); };
+async function loadShop() {
+  $('#shopList').innerHTML = '<li class="empty">Loading…</li>';
+  try {
+    const [me, prods] = await Promise.all([act('localts:me').catch(() => null), act('localts:products')]);
+    if (me) $('#shopMe').textContent = `${me.username || 'Signed in'}${me.balance != null ? ` · ${me.balance} credits` : ''}`;
+    const items = prods.products || [];
+    $('#shopList').innerHTML = items.length ? items.map(p => {
+      const img = ltsLogo(p.logoUrl), out = p.stock === 0;
+      return `<li data-id="${esc(p.id)}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
+        <span class="name">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr${p.stock != null ? ` · ${out ? 'out of stock' : p.stock + ' left'}` : ''}</span></span>
+        <input class="qty" type="number" min="1" value="1"${p.stock ? ` max="${p.stock}"` : ''} aria-label="Quantity"${out ? ' disabled' : ''}>
+        <button type="button" class="link buy"${out ? ' disabled' : ''}>Buy →</button></li>`;
+    }).join('') : '<li class="empty">No products</li>';
+  } catch { $('#shopList').innerHTML = '<li class="empty">Couldn\'t load products</li>'; }
+}
+$('#shopList').onclick = async e => {
+  const b = e.target.closest('.buy'); if (!b) return;
+  const li = e.target.closest('li[data-id]');
+  const amount = Math.max(1, +li.querySelector('.qty').value || 1);
+  b.disabled = true; b.textContent = 'Buying…';
+  try {
+    const r = await act('localts:purchase', { id: li.dataset.id, amount });
+    toast('Purchased' + (r.orderId ? ` · order ${r.orderId}` : '') + ' — import it from Orders');
+    loadShop();
+  } catch { b.disabled = false; b.textContent = 'Buy →'; }
 };
 
 // ---------- worlds ----------
