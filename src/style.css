@@ -102,6 +102,9 @@ h1 { font: 400 clamp(56px, 8vw, 112px)/1 var(--serif); margin: 0 0 18px; letter-
 .list .x { color: var(--dim); font-size: 18px; line-height: 1; width: 20px; }
 .list .stock { width: 52px; border: 1px solid var(--line); padding: 3px 6px; text-align: center; flex: none; }
 .list .cost { color: var(--dim); font-size: 12px; width: 72px; text-align: right; }
+.list .copyico { color: var(--dim); flex: none; display: grid; }
+.list .copyico:hover { color: var(--warm); }
+.list .copyico svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 /* instant full-name tooltip (native title has an OS hover delay) */
 .list li[data-name] { position: relative; }
 .list li[data-name]:hover::after {

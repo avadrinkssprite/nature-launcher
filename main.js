@@ -595,6 +595,13 @@ h('localts:key', key => {
   writeJSON(CFG, c);
   return publicCfg();
 });
+h('localts:tokens', async content => {
+  const i = String(content || '').indexOf(':');
+  const token = i >= 0 ? content.slice(i + 1).trim() : String(content || '').trim();
+  if (!token) throw new Error('This order item has no token');
+  const s = await ltsLogin(token); // mints the session token; refresh may rotate, so return the fresh pair
+  return { name: s.name, session: s.token, refresh: s.refresh };
+});
 h('localts:me', () => ltsGet('/me'));
 h('localts:products', () => ltsGet('/products'));
 h('localts:purchase', async ({ id, amount }) => {

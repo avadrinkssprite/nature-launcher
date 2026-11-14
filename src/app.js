@@ -380,11 +380,27 @@ async function loadOrder(id) {
     const nameOf = c => c.indexOf(':') > 0 ? c.slice(0, c.indexOf(':')) : 'Account'; // content is "username:refreshToken"
     $('#ltsList').innerHTML = items.length ? items.map((it, i) =>
       `<li data-content="${esc(it.content)}"><span class="name"><span style="color:var(--dim)">#${i + 1}</span> ${esc(nameOf(it.content))}</span>
+        <button type="button" class="copyico" title="Show tokens" aria-label="Show tokens"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg></button>
         <button type="button" class="link import">Import →</button></li>`).join('')
       : '<li class="empty">Nothing to import in this order</li>';
   } catch { $('#ltsList').innerHTML = '<li class="empty">Couldn\'t load this order</li>'; }
 }
 $('#ltsList').onclick = async e => {
+  const tk = e.target.closest('.copyico');
+  if (tk) {
+    const li = e.target.closest('li[data-content]');
+    tk.disabled = true;
+    $('#tokTitle').textContent = 'Account tokens';
+    $('#tokViewSession').value = $('#tokViewRefresh').value = 'Loading…';
+    $('#dlgTokens').showModal();
+    try {
+      const t = await act('localts:tokens', li.dataset.content);
+      $('#tokTitle').textContent = `${t.name} — tokens`;
+      $('#tokViewSession').value = t.session; $('#tokViewRefresh').value = t.refresh;
+    } catch { $('#dlgTokens').close(); }
+    tk.disabled = false;
+    return;
+  }
   const imp = e.target.closest('.import');
   if (imp) {
     const li = e.target.closest('li[data-content]');
@@ -397,6 +413,16 @@ $('#ltsList').onclick = async e => {
   }
   const li = e.target.closest('li[data-order]');
   if (li) loadOrder(li.dataset.order);
+};
+
+$('#dlgTokens').onclick = e => {
+  const c = e.target.closest('[data-copy]'); if (!c) return;
+  const inp = $(c.dataset.copy);
+  inp.select(); inp.setSelectionRange(0, inp.value.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch {}
+  if (!ok && navigator.clipboard) navigator.clipboard.writeText(inp.value).catch(() => {});
+  toast('Copied');
 };
 
 // ---------- Localts shop ----------

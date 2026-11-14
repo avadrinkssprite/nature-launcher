@@ -223,6 +223,15 @@
     </form>
   </dialog>
 
+  <dialog id="dlgTokens">
+    <form method="dialog">
+      <h2 id="tokTitle">Account tokens</h2>
+      <label>Session token<span class="inline"><input id="tokViewSession" type="text" readonly><button type="button" class="link" data-copy="#tokViewSession">Copy</button></span></label>
+      <label>Refresh token<span class="inline"><input id="tokViewRefresh" type="text" readonly><button type="button" class="link" data-copy="#tokViewRefresh">Copy</button></span></label>
+      <div class="row"><button value="close" class="link">Close</button></div>
+    </form>
+  </dialog>
+
   <dialog id="dlgShop">
     <form method="dialog">
       <h2>Localts shop</h2>
