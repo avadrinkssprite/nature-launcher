@@ -19,7 +19,8 @@
 - **Modpacks**: import from Modrinth search or from a local `.mrpack` file.
 - **Update all**: checks every mod, resource pack and shader against Modrinth, including files you added yourself.
 - **Automatic Java**: downloads the right Java runtime for each Minecraft version (Java 8 for 1.8.9, 21 for 1.21, …).
-- **Accounts**: Microsoft sign-in or an offline username.
+- **Accounts**: Microsoft sign-in, a session token, or an offline username.
+- **Localts**: add your [Localts](https://localts.store) API key in Settings to get Orders and Shop buttons — buy accounts and import them straight into the account switcher, or copy their session and refresh tokens.
 - **Animated pixel-art background** drawn live on a canvas: clouds lit by the setting sun, moving waves, a lighthouse and gulls.
 
 ## Installing
