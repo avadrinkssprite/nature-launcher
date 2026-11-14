@@ -409,13 +409,19 @@ async function loadShop() {
     const items = prods.products || [];
     $('#shopList').innerHTML = items.length ? items.map(p => {
       const img = ltsLogo(p.logoUrl), out = p.stock === 0;
-      return `<li data-id="${esc(p.id)}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
-        <span class="name">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr${p.stock != null ? ` · ${out ? 'out of stock' : p.stock + ' left'}` : ''}</span></span>
+      return `<li data-id="${esc(p.id)}" data-price="${+p.priceInCredits || 0}"><span class="ico"${img ? ` style="background-image:url('${esc(img)}')"` : ''}></span>
+        <span class="name">${esc(p.name || 'Product')} <span style="color:var(--dim)">${p.priceInCredits} cr each${p.stock != null ? ` · ${out ? 'out of stock' : p.stock + ' left'}` : ''}</span></span>
         <input class="qty" type="number" min="1" value="1"${p.stock ? ` max="${p.stock}"` : ''} aria-label="Quantity"${out ? ' disabled' : ''}>
+        <span class="cost">${p.priceInCredits} cr</span>
         <button type="button" class="link buy"${out ? ' disabled' : ''}>Buy →</button></li>`;
     }).join('') : '<li class="empty">No products</li>';
   } catch { $('#shopList').innerHTML = '<li class="empty">Couldn\'t load products</li>'; }
 }
+$('#shopList').oninput = e => {
+  const li = e.target.closest('li[data-id]'); if (!li) return;
+  const qty = Math.max(1, +li.querySelector('.qty').value || 1);
+  li.querySelector('.cost').textContent = (+li.dataset.price * qty) + ' cr';
+};
 $('#shopList').onclick = async e => {
   const b = e.target.closest('.buy'); if (!b) return;
   const li = e.target.closest('li[data-id]');
