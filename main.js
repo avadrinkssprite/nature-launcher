@@ -674,6 +674,13 @@ h('launch', async id => {
 
   inst.lastPlayed = Date.now();
   saveInst(id, inst);
+  // Minecraft defaults syncChunkWrites to true only on Windows. An options.txt carried over from Windows
+  // makes every chunk write O_DSYNC, which on Linux (btrfs/HDD) turns "Saving world" into minutes.
+  const opts = path.join(instDir(id), 'options.txt');
+  if (process.platform !== 'win32' && fs.existsSync(opts)) {
+    const txt = fs.readFileSync(opts, 'utf8');
+    if (txt.includes('syncChunkWrites:true')) fs.writeFileSync(opts, txt.replace('syncChunkWrites:true', 'syncChunkWrites:false'));
+  }
   running.set(id, null);
   try {
     const proc = await core.launch({
