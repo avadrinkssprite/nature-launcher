@@ -55,6 +55,7 @@
       <div class="meta">
         <span id="instMeta"></span>
         <span class="actions">
+          <button class="link" id="instRename">Rename</button>
           <button class="link" id="instVersion" hidden>Version files</button>
           <button class="link" id="instFolder">Folder</button>
           <button class="link danger" id="instDelete">Delete</button>
@@ -238,6 +239,14 @@
       <p class="hint" id="shopMe"></p>
       <ul id="shopList" class="list"></ul>
       <div class="row"><button value="close" class="link">Close</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgRename">
+    <form method="dialog" id="formRename">
+      <h2>Rename instance</h2>
+      <label>Name<input name="name" maxlength="40" required autofocus></label>
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
 

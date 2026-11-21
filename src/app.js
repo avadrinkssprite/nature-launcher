@@ -207,6 +207,11 @@ on('started', () => { $('#progress').hidden = true; toast('Game starting…'); }
 on('closed', (id, code) => { state.running.delete(id); $('#progress').hidden = true; renderInstance(); toast(`Game closed (exit ${code})`, code !== 0); });
 
 // ---------- instance actions ----------
+$('#instRename').onclick = () => { $('#formRename').name.value = cur().name; $('#dlgRename').showModal(); };
+$('#dlgRename').onclose = async () => {
+  if ($('#dlgRename').returnValue !== 'ok') return;
+  try { await act('instance:rename', state.current, $('#formRename').name.value); loadInstances(); toast('Renamed'); } catch {}
+};
 $('#instVersion').onclick = () => act('open:version', state.current);
 $('#instFolder').onclick = () => act('open', state.current);
 $('#instDelete').onclick = async () => {

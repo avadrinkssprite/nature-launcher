@@ -141,6 +141,15 @@ h('instance:mrpack', async ({ name, versionId, file }) => {
   return importMrpack(buf, name);
 });
 
+// display name only; the folder (instance id) stays, so paths and running games are unaffected
+h('instance:rename', (id, name) => {
+  name = String(name || '').trim();
+  if (!name) throw new Error('Name required');
+  const inst = readInst(id);
+  inst.name = name.slice(0, 40);
+  saveInst(id, inst);
+});
+
 h('instance:delete', id => {
   if (running.has(path.basename(id))) throw new Error('Close the game first');
   fs.rmSync(instDir(id), { recursive: true, force: true });
