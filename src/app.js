@@ -48,6 +48,7 @@ function renderInstance() {
   $('#instName').textContent = i.name;
   $('#instMeta').textContent = `Minecraft ${i.version} · ${loaderLabel(i)}${i.modpack ? ' · ' + i.modpack.name : ''}`;
   $('#instVersion').hidden = i.loader !== 'custom';
+  $('#instRename').hidden = state.running.has(i.id); // the folder can't be moved while the game uses it
   $('#launchBtn').disabled = state.running.has(i.id);
   $('#launchBtn').textContent = state.running.has(i.id) ? 'Running' : 'Launch →';
   $('#log').textContent = state.logs[i.id] || 'No output yet.';
@@ -210,7 +211,12 @@ on('closed', (id, code) => { state.running.delete(id); $('#progress').hidden = t
 $('#instRename').onclick = () => { $('#formRename').name.value = cur().name; $('#dlgRename').showModal(); };
 $('#dlgRename').onclose = async () => {
   if ($('#dlgRename').returnValue !== 'ok') return;
-  try { await act('instance:rename', state.current, $('#formRename').name.value); loadInstances(); toast('Renamed'); } catch {}
+  const old = state.current;
+  try {
+    const id = await act('instance:rename', old, $('#formRename').name.value);
+    if (id !== old && state.logs[old]) { state.logs[id] = state.logs[old]; delete state.logs[old]; }
+    await loadInstances(id); toast('Renamed');
+  } catch { loadInstances(); }
 };
 $('#instVersion').onclick = () => act('open:version', state.current);
 $('#instFolder').onclick = () => act('open', state.current);

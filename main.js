@@ -141,13 +141,28 @@ h('instance:mrpack', async ({ name, versionId, file }) => {
   return importMrpack(buf, name);
 });
 
-// display name only; the folder (instance id) stays, so paths and running games are unaffected
+// renames the display name and the instance folder; returns the new id
 h('instance:rename', (id, name) => {
-  name = String(name || '').trim();
+  id = path.basename(String(id));
+  name = String(name || '').trim().slice(0, 40);
   if (!name) throw new Error('Name required');
+  if (running.has(id)) throw new Error('Close the game first');
   const inst = readInst(id);
-  inst.name = name.slice(0, 40);
+  inst.name = name;
   saveInst(id, inst);
+  const base = name.replace(/[^\w\- ]/g, '').trim() || 'instance';
+  if (base === id) return id;
+  const same = c => c.toLowerCase() === id.toLowerCase(); // Windows paths are case-insensitive
+  let newId = base;
+  for (let n = 2; !same(newId) && fs.existsSync(path.join(INST, newId)); n++) newId = `${base}-${n}`;
+  const from = path.join(INST, id), to = path.join(INST, newId);
+  try {
+    if (same(newId)) { const tmp = from + '.nlrename'; fs.renameSync(from, tmp); fs.renameSync(tmp, to); } // case-only change
+    else fs.renameSync(from, to);
+  } catch (e) {
+    throw new Error(`Renamed, but the folder couldn't be moved (${e.code || e.message}). Close anything using it and try again.`);
+  }
+  return newId;
 });
 
 h('instance:delete', id => {
