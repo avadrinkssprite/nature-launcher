@@ -26,8 +26,11 @@ async function act(fn, ...a) {
 }
 
 // ---------- instances ----------
+// the Import button only shows while another launcher has something not imported yet
+const refreshImport = () => invoke('import:scan').then(l => { $('#importInst').hidden = !l.length; }, () => {});
 async function loadInstances(select) {
   state.instances = await act('instances');
+  refreshImport();
   if (select) state.current = select;
   if (!cur()) state.current = state.instances[0]?.id || null;
   $('#instances').innerHTML = state.instances.map(i =>

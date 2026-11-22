@@ -136,6 +136,9 @@ async function importMrpack(buf, name) {
 // the renderer only gets keys back, so it can't point an import at arbitrary paths
 const found = new Map();
 async function remember(list) {
+  // hide what's already been imported (instance.json keeps the source's key)
+  const have = new Set(fs.existsSync(INST) ? fs.readdirSync(INST).map(id => readJSON(path.join(INST, id, 'instance.json'), null)?.importedKey).filter(Boolean) : []);
+  list = list.filter(c => !have.has(c.key));
   // a .minecraft "vanilla" version Mojang doesn't know is a renamed client: it imports as custom
   const known = await core.manifest().then(m => new Set(m.versions.map(v => v.id)), () => null);
   for (const c of list) if (known && c.loader === 'vanilla' && c.versionDir && !known.has(c.mc)) c.loader = 'custom';
@@ -171,7 +174,7 @@ async function importOne(c) {
     customId = path.basename(c.versionDir);
     version = j.inheritsFrom || j.id;
   }
-  const id = await createInstance({ name: c.name, version, loader, wanted: c.loaderVersion, customId, extra: { jvmArgs: c.jvmArgs || '', importedFrom: c.source } });
+  const id = await createInstance({ name: c.name, version, loader, wanted: c.loaderVersion, customId, extra: { jvmArgs: c.jvmArgs || '', importedFrom: c.source, importedKey: c.key } });
   const dir = instDir(id);
   try {
     const items = (fs.existsSync(c.dir) ? fs.readdirSync(c.dir) : []).filter(n => !importers.SKIP.has(n.toLowerCase()));
