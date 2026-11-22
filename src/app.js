@@ -314,6 +314,37 @@ $('#dlgNew').onclose = async () => {
   toast('Instance ready');
 };
 
+// ---------- import from other launchers ----------
+function showImport(list) {
+  const have = new Set([...$('#importList').querySelectorAll('input')].map(i => i.value));
+  $('#importList').insertAdjacentHTML('beforeend', list.filter(c => !have.has(c.key)).map(c =>
+    `<li><label title="${esc(c.dir)}"><input type="checkbox" value="${esc(c.key)}"><span class="col"><span class="name">${esc(c.name)}</span><span class="sub">${esc(c.source)} · ${esc(c.mc)} · ${LOADER_NAMES[c.loader] || esc(c.loader)}</span></span></label></li>`).join(''));
+  const n = $('#importList').children.length;
+  $('#importHint').textContent = n ? 'Tick the instances to copy. The originals are left as they are.'
+    : 'No other launchers found. Use Choose folder… to pick a launcher or instance folder.';
+}
+async function openImport() {
+  $('#importList').innerHTML = ''; $('#importHint').textContent = 'Looking for other launchers…';
+  $('#dlgImport').showModal();
+  showImport(await act('import:scan'));
+}
+$('#importInst').onclick = openImport;
+$('#importPick').onclick = async () => {
+  const list = await act('import:folder');
+  if (list && !list.length) toast('No instances found in that folder', true);
+  if (list) showImport(list);
+};
+$('#dlgImport').onclose = async () => {
+  const keys = [...$('#importList').querySelectorAll('input:checked')].map(i => i.value);
+  if ($('#dlgImport').returnValue !== 'ok' || !keys.length) return;
+  toast(`Importing ${keys.length} instance${keys.length > 1 ? 's' : ''}…`);
+  const r = await act('import:run', keys);
+  $('#progress').hidden = true;
+  await loadInstances(r.ids[0]);
+  if (r.errors.length) toast(`Imported ${r.ids.length}, ${r.errors.length} failed: ${r.errors.join('; ')}`, true);
+  else toast(`Imported ${r.ids.length} instance${r.ids.length > 1 ? 's' : ''}`);
+};
+
 // ---------- settings ----------
 const fSet = $('#formSettings');
 const LTS_MASK = '••••••••••••'; // shown when a key is already saved; unchanged means "leave the key as-is"
@@ -716,5 +747,6 @@ $('#shotGrid').onclick = async e => {
   state.cfg = await act('cfg:get');
   renderAccounts();
   applyCfg();
-  loadInstances();
+  await loadInstances();
+  if (await act('import:pending')) openImport();
 })();

@@ -49,6 +49,27 @@ static class Setup
         return 0;
     }
 
+    // other launchers whose instances the launcher can import (it does the copying on first start)
+    public static bool OtherLaunchers()
+    {
+        string data = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return new[] {
+            Path.Combine(data, "PrismLauncher"), Path.Combine(data, "PolyMC"), Path.Combine(data, "MultiMC"),
+            Path.Combine(data, "ModrinthApp"), Path.Combine(data, "com.modrinth.theseus"),
+            Path.Combine(home, "curseforge", "minecraft", "Instances"), Path.Combine(data, "ATLauncher"),
+            Path.Combine(data, "gdlauncher_next"), Path.Combine(data, "gdlauncher_carbon"), Path.Combine(data, ".minecraft", "versions"),
+        }.Any(Directory.Exists);
+    }
+
+    // the launcher opens its import screen once when it finds this file
+    public static void RequestImport()
+    {
+        string d = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "nature-launcher");
+        Directory.CreateDirectory(d);
+        File.WriteAllText(Path.Combine(d, "import-pending"), "");
+    }
+
     public static string InstalledDir()
     {
         using (var k = Registry.CurrentUser.OpenSubKey(UninstallKey))
@@ -276,7 +297,7 @@ class SetupForm : Form
     readonly Image bg;
     readonly TextBox dirBox = new TextBox();
     readonly Button browse = new Button(), action = new Button();
-    readonly CheckBox startBox = new PixelCheck(), deskBox = new PixelCheck();
+    readonly CheckBox startBox = new PixelCheck(), deskBox = new PixelCheck(), importBox = new PixelCheck();
     string status;
     Color statusColor = Dim;
     int pct = -1;
@@ -313,11 +334,14 @@ class SetupForm : Form
 
         Check(startBox, "Start menu shortcut", new Point(24, 262), !installed || File.Exists(Setup.StartLnk));
         Check(deskBox, "Desktop shortcut", new Point(200, 262), !installed || File.Exists(Setup.DesktopLnk));
+        Check(importBox, "Import from other launchers", new Point(352, 262), !installed);
+        deskBox.Width = 145; importBox.Width = 200; // three in a row: keep the click areas from overlapping
+        importBox.Visible = Setup.OtherLaunchers();
 
         Style(action, installed ? "Update" : "Install", new Rectangle(432, 310, 120, 34), Warm);
         action.Click += (s, e) => { if (done) { Launch(); Close(); } else Start(); };
 
-        Controls.AddRange(new Control[] { dirBox, browse, startBox, deskBox, action });
+        Controls.AddRange(new Control[] { dirBox, browse, startBox, deskBox, importBox, action });
         ActiveControl = action; // don't open with the path text selected
         if (update)
         {
@@ -369,6 +393,7 @@ class SetupForm : Form
         if (!Path.IsPathRooted(d)) { SetStatus("Choose a full folder path.", -1, Bad); return; }
         Setup.Dir = Path.GetFullPath(d);
         bool? sm = update ? (bool?)null : startBox.Checked, dk = update ? (bool?)null : deskBox.Checked;
+        bool imp = !update && importBox.Visible && importBox.Checked;
         foreach (Control c in Controls) c.Enabled = false;
         SetStatus("Starting…", 0, Dim);
         Task.Run(() => Setup.Install((msg, p) => BeginInvoke((Action)(() => SetStatus(msg, p, Dim))), sm, dk))
@@ -385,6 +410,7 @@ class SetupForm : Form
                     return;
                 }
                 done = true;
+                if (imp) try { Setup.RequestImport(); } catch { } // optional: the launcher also has an Import button
                 if (update) { Launch(); Close(); return; }
                 SetStatus("Installed. Nature Launcher is ready.", 100, Warm);
                 action.Text = "Launch"; action.Enabled = true;

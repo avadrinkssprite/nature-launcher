@@ -17,6 +17,7 @@
     <div class="label">Instances</div>
     <ul id="instances"></ul>
     <button id="newInst" class="link">+ New instance</button>
+    <button id="importInst" class="link">Import from launcher</button>
     <button id="accountBtn" class="account">
       <span class="label">Account</span>
       <span id="accountName">None</span>
@@ -248,6 +249,15 @@
       <h2>Rename instance</h2>
       <label>Name<input name="name" maxlength="40" required autofocus></label>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgImport">
+    <form method="dialog" id="formImport">
+      <h2>Import instances</h2>
+      <p class="hint" id="importHint"></p>
+      <ul id="importList" class="list picks"></ul>
+      <div class="row"><button type="button" id="importPick" class="link">Choose folder…</button><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Import →</button></div>
     </form>
   </dialog>
 

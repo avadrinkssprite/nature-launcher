@@ -6,6 +6,7 @@ const { Auth } = require('./lib/deps');
 const createCore = require('./mc');
 const createRpc = require('./discord');
 const worlds = require('./worlds');
+const importers = require('./importers');
 
 // pinned so the packaged exe (named "Nature Launcher") keeps using the same data folder
 app.setPath('userData', path.join(app.getPath('appData'), 'nature-launcher'));
@@ -131,6 +132,78 @@ async function importMrpack(buf, name) {
   }
   return id;
 }
+// ---------- import from other launchers ----------
+// the renderer only gets keys back, so it can't point an import at arbitrary paths
+const found = new Map();
+async function remember(list) {
+  // a .minecraft "vanilla" version Mojang doesn't know is a renamed client: it imports as custom
+  const known = await core.manifest().then(m => new Set(m.versions.map(v => v.id)), () => null);
+  for (const c of list) if (known && c.loader === 'vanilla' && c.versionDir && !known.has(c.mc)) c.loader = 'custom';
+  return list.map(c => (found.set(c.key, c), { key: c.key, source: c.source, name: c.name, mc: c.mc, loader: c.loader, dir: c.dir }));
+}
+h('import:scan', () => remember(importers.scan()));
+h('import:folder', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Choose a launcher, instances or instance folder', properties: ['openDirectory'] });
+  return r.canceled ? null : remember(importers.scanFolder(r.filePaths[0]));
+});
+// the installer leaves this file when "Import from other launchers" was ticked
+h('import:pending', () => {
+  const f = path.join(DATA, 'import-pending');
+  if (!fs.existsSync(f)) return false;
+  fs.rmSync(f, { force: true });
+  return true;
+});
+
+// copies a .minecraft version and any local parents it inherits from into our shared versions folder
+function copyVersion(vd) {
+  const j = readJSON(path.join(vd, path.basename(vd) + '.json'), null);
+  if (!j?.id) throw new Error(`No version json in ${vd}`);
+  const seen = new Set();
+  for (let d = vd, v = j; v && !seen.has(d); ) {
+    seen.add(d);
+    const id = path.basename(d);
+    if (!fs.existsSync(core.vjson(id))) fs.cpSync(d, core.vdir(id), { recursive: true });
+    d = v.inheritsFrom && path.join(path.dirname(d), path.basename(v.inheritsFrom));
+    v = d && readJSON(path.join(d, path.basename(d) + '.json'), null);
+  }
+  return j;
+}
+
+async function importOne(c) {
+  let { loader, mc: version } = c, customId;
+  if (loader === 'vanilla' && !(await core.manifest()).versions.some(v => v.id === version)) loader = 'custom';
+  if (loader === 'custom') {
+    if (!c.versionDir) throw new Error(`${c.name}: unknown Minecraft version ${version}`);
+    const j = copyVersion(c.versionDir);
+    customId = path.basename(c.versionDir);
+    version = j.inheritsFrom || j.id;
+  }
+  const id = await createInstance({ name: c.name, version, loader, wanted: c.loaderVersion, customId, extra: { jvmArgs: c.jvmArgs || '', importedFrom: c.source } });
+  const dir = instDir(id);
+  try {
+    const items = (fs.existsSync(c.dir) ? fs.readdirSync(c.dir) : []).filter(n => !importers.SKIP.has(n.toLowerCase()));
+    let done = 0;
+    for (const n of items) {
+      await fs.promises.cp(path.join(c.dir, n), path.join(dir, n), { recursive: true, force: false, errorOnExist: false });
+      send('progress', id, { label: `Copying ${c.name}`, done: ++done, total: items.length });
+    }
+  } catch (e) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    throw e;
+  }
+  return id;
+}
+// imports one at a time; returns the new ids and an error line for each that failed
+h('import:run', async keys => {
+  const ids = [], errors = [];
+  for (const k of keys) {
+    const c = found.get(k);
+    if (!c) continue;
+    try { ids.push(await importOne(c)); } catch (e) { errors.push(`${c.name}: ${e.message}`); }
+  }
+  return { ids, errors };
+});
+
 h('instance:mrpack', async ({ name, versionId, file }) => {
   if (file) return importMrpack(fs.readFileSync(file), name);
   const v = await getJSON(`https://api.modrinth.com/v2/version/${encodeURIComponent(versionId)}`);

@@ -244,6 +244,15 @@ dialog .list .on .name { color: var(--warm); }
 .picks .on .name { color: var(--warm); }
 input[type=file] { padding: 6px; font-size: 12px; }
 #newErr:empty { display: none; }
+#importList li { padding: 0; }
+#importList label { display: flex; align-items: center; gap: 10px; padding: 9px 18px; flex: 1; min-width: 0; cursor: pointer; }
+#importList .col { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+#importList .sub { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#dlgImport { width: 540px; }
+#importList { max-height: 300px; }
+#importList .name { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 14px; color: var(--ink); }
+#importList .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+#importPick { margin-right: auto; }
 .progress { position: relative; }
 .progress .label { position: absolute; right: 0; top: 6px; font-size: 10px; }
 
