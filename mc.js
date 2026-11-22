@@ -321,6 +321,9 @@ module.exports = function createCore(ROOT) {
     };
   }
 
+  // splits a user-typed argument string; "double" or 'single' quotes keep spaces together
+  const splitArgs = s => (String(s || '').match(/(?:"[^"]*"|'[^']*'|[^\s"'])+/g) || []).map(t => t.replace(/"([^"]*)"|'([^']*)'/g, '$1$2'));
+
   // ---------- launch ----------
   async function launch({ inst, gameDir, auth, javaPath, memory, log, progress }) {
     const id = await installLoader(inst, javaPath, progress, log);
@@ -384,7 +387,8 @@ module.exports = function createCore(ROOT) {
       jvm.unshift(lc.argument.replace('${path}', f));
     }
 
-    const args = [`-Xmx${memory}G`, '-Xms512M', ...jvm.map(sub), v.mainClass, ...game.map(sub)];
+    // instance args go last so they override the defaults (Java keeps the last -Xmx)
+    const args = [`-Xmx${memory}G`, '-Xms512M', ...jvm.map(sub), ...splitArgs(inst.jvmArgs), v.mainClass, ...game.map(sub), ...splitArgs(inst.gameArgs)];
     log(`Launching ${id} with ${javaExe}`);
     // detached: Electron kills attached children when it quits; the game should outlive the launcher.
     // No windowsHide: LWJGL 2 (MC <= 1.12) opens its window with SW_SHOWDEFAULT, which would inherit SW_HIDE.
@@ -396,5 +400,5 @@ module.exports = function createCore(ROOT) {
     return proc;
   }
 
-  return { launch, loaderGames, loaderVersion, manifest, offlineUUID, download, pool, sha1, vdir, vjson };
+  return { launch, splitArgs, loaderGames, loaderVersion, manifest, offlineUUID, download, pool, sha1, vdir, vjson };
 };

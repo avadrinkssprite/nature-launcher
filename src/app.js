@@ -218,6 +218,12 @@ $('#dlgRename').onclose = async () => {
     await loadInstances(id); toast('Renamed');
   } catch { loadInstances(); }
 };
+$('#instArgs').onclick = () => { const f = $('#formArgs'), i = cur(); f.jvm.value = i.jvmArgs || ''; f.game.value = i.gameArgs || ''; $('#dlgArgs').showModal(); };
+$('#dlgArgs').onclose = async () => {
+  if ($('#dlgArgs').returnValue !== 'ok') return;
+  const f = $('#formArgs');
+  try { await act('instance:args', state.current, f.jvm.value, f.game.value); await loadInstances(state.current); toast('Launch args saved'); } catch {}
+};
 $('#instVersion').onclick = () => act('open:version', state.current);
 $('#instFolder').onclick = () => act('open', state.current);
 $('#instDelete').onclick = async () => {

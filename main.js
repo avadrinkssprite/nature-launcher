@@ -141,6 +141,14 @@ h('instance:mrpack', async ({ name, versionId, file }) => {
   return importMrpack(buf, name);
 });
 
+h('instance:args', (id, jvmArgs, gameArgs) => {
+  id = path.basename(String(id));
+  const inst = readInst(id);
+  inst.jvmArgs = String(jvmArgs || '').trim();
+  inst.gameArgs = String(gameArgs || '').trim();
+  saveInst(id, inst);
+});
+
 // renames the display name and the instance folder; returns the new id
 h('instance:rename', (id, name) => {
   id = path.basename(String(id));

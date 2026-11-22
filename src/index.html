@@ -56,6 +56,7 @@
         <span id="instMeta"></span>
         <span class="actions">
           <button class="link" id="instRename">Rename</button>
+          <button class="link" id="instArgs">Launch args</button>
           <button class="link" id="instVersion" hidden>Version files</button>
           <button class="link" id="instFolder">Folder</button>
           <button class="link danger" id="instDelete">Delete</button>
@@ -246,6 +247,16 @@
     <form method="dialog" id="formRename">
       <h2>Rename instance</h2>
       <label>Name<input name="name" maxlength="40" required autofocus></label>
+      <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgArgs">
+    <form method="dialog" id="formArgs">
+      <h2>Launch arguments</h2>
+      <label>JVM arguments<input name="jvm" placeholder="-Xmx6G -XX:+UseG1GC" spellcheck="false"></label>
+      <label>Game arguments<input name="game" placeholder="--width 1280 --height 720" spellcheck="false"></label>
+      <p class="hint">Added after the defaults, so they override them. Use quotes for values with spaces.</p>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
