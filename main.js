@@ -146,13 +146,6 @@ h('import:folder', async () => {
   const r = await dialog.showOpenDialog(win, { title: 'Choose a launcher, instances or instance folder', properties: ['openDirectory'] });
   return r.canceled ? null : remember(importers.scanFolder(r.filePaths[0]));
 });
-// the installer leaves this file when "Import from other launchers" was ticked
-h('import:pending', () => {
-  const f = path.join(DATA, 'import-pending');
-  if (!fs.existsSync(f)) return false;
-  fs.rmSync(f, { force: true });
-  return true;
-});
 
 // copies a .minecraft version and any local parents it inherits from into our shared versions folder
 function copyVersion(vd) {

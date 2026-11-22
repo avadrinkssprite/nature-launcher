@@ -14,7 +14,7 @@
 
 - **Instances** for Vanilla, Fabric, Quilt, Forge and NeoForge, for every Mojang release (snapshots and old betas optional). Each instance has its own worlds, mods and settings.
 - **Custom versions**: bring your own version `.json` (and `.jar`).
-- **Import from other launchers**: copy instances from Prism Launcher, PolyMC, MultiMC, Modrinth App, CurseForge, ATLauncher, GDLauncher or a `.minecraft` folder. The installer offers it on first install, and the sidebar has an Import button. The originals are left untouched.
+- **Import from other launchers**: copy instances from Prism Launcher, PolyMC, MultiMC, Modrinth App, CurseForge, ATLauncher, GDLauncher or a `.minecraft` folder. Use the Import button in the sidebar. The originals are left untouched.
 - **Launch args per instance**: extra JVM and game arguments, added after the defaults so they override them.
 - **Manage content in the app**: mods, resource packs and shaders. Enable or disable, delete, add files or drag them in.
 - **Modrinth built in**: search mods, resource packs and shaders filtered to the instance's version and loader, and install them with their required dependencies.

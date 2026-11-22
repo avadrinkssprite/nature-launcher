@@ -747,6 +747,5 @@ $('#shotGrid').onclick = async e => {
   state.cfg = await act('cfg:get');
   renderAccounts();
   applyCfg();
-  await loadInstances();
-  if (await act('import:pending')) openImport();
+  loadInstances();
 })();
