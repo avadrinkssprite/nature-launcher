@@ -270,6 +270,14 @@ h('content:toggle', (id, kind, file) => {
 
 h('content:remove', (id, kind, file) => fs.rmSync(path.join(kindDir(id, kind), path.basename(file)), { recursive: true, force: true }));
 
+// an unzipped resource pack: the folder with pack.mcmeta, or its only subfolder (extracting "X.zip" often makes X/X/)
+function packRoot(p) {
+  if (!fs.statSync(p).isDirectory()) return null;
+  if (fs.existsSync(path.join(p, 'pack.mcmeta'))) return p;
+  const subs = fs.readdirSync(p, { withFileTypes: true });
+  return subs.length === 1 && subs[0].isDirectory() && fs.existsSync(path.join(p, subs[0].name, 'pack.mcmeta')) ? path.join(p, subs[0].name) : null;
+}
+
 h('content:add', async (id, kind, paths) => {
   const d = kindDir(id, kind);
   if (!paths?.length) {
@@ -279,7 +287,11 @@ h('content:add', async (id, kind, paths) => {
     });
     paths = r.filePaths;
   }
-  for (const p of paths) fs.cpSync(p, path.join(d, path.basename(p)), { recursive: true });
+  for (const p of paths) {
+    const root = kind === 'resourcepacks' && packRoot(p);
+    if (root) { const z = new AdmZip(); z.addLocalFolder(root); z.writeZip(path.join(d, path.basename(p) + '.zip')); }
+    else fs.cpSync(p, path.join(d, path.basename(p)), { recursive: true });
+  }
   return paths.length;
 });
 
