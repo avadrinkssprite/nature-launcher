@@ -74,8 +74,9 @@ main .meta, .tabs, .tagline, main h1 { text-shadow: var(--shade); }
 h1 { font: 400 clamp(56px, 8vw, 112px)/1 var(--serif); margin: 0 0 18px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rule { height: 1px; background: rgba(238, 241, 248, .55); box-shadow: 0 1px 2px rgba(8, 16, 38, .6); }
 .meta { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; color: var(--ink); }
-#view > .tabs { margin: 10px 0; padding: 10px 14px 4px; background: var(--glass); border: 1px solid rgba(238, 241, 248, .14); backdrop-filter: blur(6px); }
-#view > .meta { padding: 8px 14px; background: var(--glass); border: 1px solid rgba(238, 241, 248, .14); backdrop-filter: blur(6px); }
+/* the tabs sit in the same glass bar as the actions, just under them */
+#view > .tabs { margin: 0 0 10px; padding: 10px 14px 4px; background: var(--glass); border: 1px solid rgba(238, 241, 248, .14); border-top: 1px solid rgba(238, 241, 248, .08); backdrop-filter: blur(6px); }
+#view > .meta { padding: 8px 14px; background: var(--glass); border: 1px solid rgba(238, 241, 248, .14); border-bottom: 0; backdrop-filter: blur(6px); }
 .actions { display: flex; gap: 22px; align-items: center; margin-left: auto; }
 .link { padding-bottom: 3px; border-bottom: 1px solid var(--line); }
 .link:hover { border-color: var(--ink); }
@@ -290,8 +291,8 @@ input[type=file] { padding: 6px; font-size: 12px; }
 .brand { animation: fade .8s backwards !important; }
 .top .icon { animation: fade .8s .3s backwards; }
 .hero > *, #view > h1, #view > .meta, #view > .tabs { animation: rise .8s cubic-bezier(.2, .7, .2, 1) backwards; }
-.hero > .meta, #view > .meta { animation-delay: .25s; }
-.hero > .tagline, #view > .tabs { animation-delay: .4s; }
+.hero > .meta, #view > .meta, #view > .tabs { animation-delay: .25s; }
+.hero > .tagline { animation-delay: .4s; }
 .rule { transform-origin: left; animation: grow 1s .15s cubic-bezier(.2, .7, .2, 1) backwards; }
 .panel { animation: rise .45s cubic-bezier(.2, .7, .2, 1) backwards; }
 #instances li { animation: slideIn .5s cubic-bezier(.2, .7, .2, 1) backwards; }
