@@ -592,20 +592,25 @@ const bgUrl = c => {
   return f && fs.existsSync(f) ? `${require('url').pathToFileURL(f)}?v=${fs.statSync(f).mtimeMs}` : '';
 };
 const publicCfg = () => { const { localtsKey, ...c } = cfg(); return { ...c, bgUrl: bgUrl(c), hasLocalts: !!localtsKey, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
-h('bg:pick', async () => {
+// Settings only previews a picked image; it's copied in when Settings is saved
+let bgChosen = null;
+h('bg:choose', async () => {
   const r = await dialog.showOpenDialog(win, { title: 'Choose a background', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }] });
-  if (r.canceled) return publicCfg();
-  const c = cfg(), name = 'background' + path.extname(r.filePaths[0]).toLowerCase();
-  if (c.background) fs.rmSync(path.join(DATA, path.basename(c.background)), { force: true });
-  fs.copyFileSync(r.filePaths[0], path.join(DATA, name));
-  c.background = name;
-  writeJSON(CFG, c);
-  return publicCfg();
+  if (r.canceled) return null;
+  bgChosen = r.filePaths[0];
+  return require('url').pathToFileURL(bgChosen).href;
 });
-h('bg:clear', () => {
+// use = true: the image last chosen above; false: back to the ocean
+h('bg:set', use => {
   const c = cfg();
+  if (use && !bgChosen) throw new Error('Choose an image first');
   if (c.background) fs.rmSync(path.join(DATA, path.basename(c.background)), { force: true });
   c.background = '';
+  if (use) {
+    c.background = 'background' + path.extname(bgChosen).toLowerCase();
+    fs.copyFileSync(bgChosen, path.join(DATA, c.background));
+  }
+  bgChosen = null;
   writeJSON(CFG, c);
   return publicCfg();
 });

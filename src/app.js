@@ -368,7 +368,9 @@ const fSet = $('#formSettings');
 const LTS_MASK = '••••••••••••'; // shown when a key is already saved; unchanged means "leave the key as-is"
 $('#settingsBtn').onclick = () => { fSet.javaPath.value = state.cfg.javaPath || ''; fSet.memory.value = state.cfg.memory; fSet.discordRpc.checked = state.cfg.discordRpc !== false; fSet.localtsKey.value = state.cfg.hasLocalts ? LTS_MASK : ''; $('#dlgSettings').showModal(); };
 $('#dlgSettings').onclose = async () => {
-  if ($('#dlgSettings').returnValue !== 'ok') return;
+  const bg = bgPending; bgPending = undefined;
+  if ($('#dlgSettings').returnValue !== 'ok') { applyCfg(); return; } // Cancel: put the saved background back
+  if (bg !== undefined) state.cfg = await act('bg:set', !!bg);
   state.cfg = await act('cfg:set', { javaPath: fSet.javaPath.value.trim(), memory: Math.max(1, +fSet.memory.value || 4), discordRpc: fSet.discordRpc.checked });
   if (fSet.localtsKey.value !== LTS_MASK) state.cfg = await act('localts:key', fSet.localtsKey.value.trim());
   applyCfg();
@@ -377,14 +379,19 @@ $('#dlgSettings').onclose = async () => {
 // show the Orders/Shop buttons only when a Localts key is set
 function applyCfg() {
   $('#ltsBtn').hidden = $('#shopBtn').hidden = !state.cfg.hasLocalts;
-  // a custom background replaces the pixel ocean (bg.js stops drawing while the canvas is hidden)
-  const url = state.cfg.bgUrl;
+  showBg(state.cfg.bgUrl);
+}
+// a custom background replaces the pixel ocean (bg.js stops drawing while the canvas is hidden)
+function showBg(url) {
   if (url && $('#bgImg').getAttribute('src') !== url) $('#bgImg').src = url;
+  if (!url) $('#bgImg').removeAttribute('src');
   $('#bgImg').hidden = !url; $('#bg').hidden = !!url;
   $('#bgClear').hidden = !url;
 }
-$('#bgPick').onclick = async () => { state.cfg = await act('bg:pick'); applyCfg(); };
-$('#bgClear').onclick = async () => { state.cfg = await act('bg:clear'); applyCfg(); $('#bgImg').removeAttribute('src'); };
+// undefined = unchanged, a URL = picked image, '' = back to the ocean; applied on Save, undone on Cancel
+let bgPending;
+$('#bgPick').onclick = async () => { const url = await act('bg:choose'); if (url) { bgPending = url; showBg(url); } };
+$('#bgClear').onclick = () => { bgPending = ''; showBg(''); };
 // Localts logo urls can be relative to the site
 const ltsLogo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (u.startsWith('/') ? '' : '/') + u;
 

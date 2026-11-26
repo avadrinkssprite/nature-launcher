@@ -230,10 +230,14 @@ select option { background: #172b55; }
 }
 .toast.err { border-left-color: var(--danger); }
 
+/* glass: the app shows through, blurred */
 dialog {
-  background: rgba(16, 30, 62, .96); color: var(--ink); border: 1px solid var(--line); padding: 28px 32px; width: 420px; backdrop-filter: blur(8px);
+  background: rgba(16, 30, 62, .7); color: var(--ink); border: 1px solid var(--line); padding: 28px 32px; width: 420px; backdrop-filter: blur(18px) saturate(1.2);
 }
-dialog::backdrop { background: rgba(8, 14, 30, .55); }
+dialog::backdrop { background: rgba(8, 14, 30, .4); backdrop-filter: blur(3px); }
+#dlgSettings { width: 460px; }
+#formSettings { gap: 16px; }
+.setBtns { display: flex; gap: 20px; }
 dialog h2 { font: 400 36px var(--serif); margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 dialog form { display: grid; gap: 14px; }
 dialog label { display: grid; gap: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
