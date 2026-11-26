@@ -126,7 +126,8 @@
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let last = 0;
   (function loop(ms) {
-    if (!canvas.hidden && ms - last > 83) { // hidden while a custom background is set last = ms; draw(ms / 1000); } // ~12 fps feels more pixel-art
+    // ~12 fps feels more pixel-art; skipped while a custom background hides the canvas
+    if (!canvas.hidden && ms - last > 83) { last = ms; draw(ms / 1000); }
     if (!still) requestAnimationFrame(loop);
   })(0);
 })();
