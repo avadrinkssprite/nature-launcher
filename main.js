@@ -603,7 +603,7 @@ const SITE = 'https://avadrinkssprite.github.io/nature-launcher/';
 const LOADER_NAMES = { vanilla: 'Vanilla', fabric: 'Fabric', quilt: 'Quilt', forge: 'Forge', neoforge: 'NeoForge', custom: 'Custom' };
 const rpc = createRpc(DISCORD_CLIENT_ID);
 function updatePresence() {
-  if (process.platform === 'linux' || !cfg().discordRpc) return rpc.stop(); // Discord presence is Windows-only
+  if (!cfg().discordRpc) return rpc.stop();
   const games = [...running].filter(([, proc]) => proc); // null = still downloading/launching
   const base = { assets: { large_image: SITE + 'icon.png', large_text: 'Nature Launcher' }, buttons: [{ label: 'Get Nature Launcher', url: SITE }] };
   if (!games.length) return rpc.set({ ...base, details: 'In the launcher' });

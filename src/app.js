@@ -1,5 +1,4 @@
 const { invoke, on, pathOf } = window.api;
-if (window.api.platform === 'linux') document.getElementById('discordOpt').hidden = true; // Discord presence is Windows-only
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 const fmtSize = b => b == null ? 'folder' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
@@ -26,11 +25,8 @@ async function act(fn, ...a) {
 }
 
 // ---------- instances ----------
-// the Import button only shows while another launcher has something not imported yet
-const refreshImport = () => invoke('import:scan').then(l => { $('#importInst').hidden = !l.length; }, () => {});
 async function loadInstances(select) {
   state.instances = await act('instances');
-  refreshImport();
   if (select) state.current = select;
   if (!cur()) state.current = state.instances[0]?.id || null;
   $('#instances').innerHTML = state.instances.map(i =>
@@ -331,7 +327,7 @@ async function openImport() {
   $('#dlgImport').showModal();
   showImport(await act('import:scan'));
 }
-$('#importInst').onclick = openImport;
+$('#importInst').onclick = () => { $('#dlgSettings').close(); openImport(); };
 $('#importPick').onclick = async () => {
   const list = await act('import:folder');
   if (list && !list.length) toast('No instances found in that folder', true);
@@ -368,6 +364,10 @@ const ltsLogo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (
 function renderAccounts() {
   const c = state.cfg, sel = c.accounts.find(a => a.id === c.selected);
   $('#accountName').textContent = sel ? sel.name : 'Sign in';
+  // offline accounts look up whoever owns that name; unknown names get Steve/Alex from mc-heads
+  const head = $('#accountHead');
+  head.hidden = !sel; head.onerror = () => (head.hidden = true); // no internet: drop the head, keep the name
+  if (sel) head.src = `https://mc-heads.net/avatar/${encodeURIComponent(sel.type === 'offline' ? sel.name : sel.uuid || sel.id)}/32`;
   $('#accList').innerHTML = c.accounts.length ? c.accounts.map(a =>
     `<li class="${a.id === c.selected ? 'on' : ''}" data-id="${esc(a.id)}"><button type="button" class="name" style="text-align:left">${esc(a.name)}</button>
       <span class="size">${a.lts ? 'Localts' : a.type === 'ms' ? 'Microsoft' : a.type === 'token' ? 'Token' : 'Offline'}</span><button type="button" class="x" aria-label="Remove ${esc(a.name)}">×</button></li>`).join('')

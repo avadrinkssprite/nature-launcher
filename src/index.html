@@ -13,14 +13,13 @@
   <div class="grain"></div>
 
   <aside class="side">
-    <div class="brand">Nature</div>
+    <img class="brand" src="../build/icon.png" alt="Nature">
     <div class="label">Instances</div>
     <ul id="instances"></ul>
     <button id="newInst" class="link">+ New instance</button>
-    <button id="importInst" class="link" hidden>Import from launcher</button>
     <button id="accountBtn" class="account">
       <span class="label">Account</span>
-      <span id="accountName">None</span>
+      <span class="who"><img id="accountHead" alt="" hidden><span id="accountName">None</span></span>
     </button>
   </aside>
 
@@ -196,6 +195,7 @@
       <label>Max memory (GB)<input name="memory" type="number" min="1" max="64" step="1"></label>
       <label class="check" id="discordOpt"><input type="checkbox" name="discordRpc"> Show what I'm playing on Discord</label>
       <label>Localts API key <span class="opt">(for importing accounts from orders)</span><input name="localtsKey" type="password" placeholder="Leave blank to hide the Orders button"></label>
+      <div class="setRow"><span class="label">Instances</span><button type="button" id="importInst" class="link">Import from another launcher →</button></div>
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>

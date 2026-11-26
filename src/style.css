@@ -10,6 +10,7 @@
   --sans: 'Archivo', 'Segoe UI', sans-serif;
   --side: 300px;
   --top: 44px;
+  --shade: 0 1px 2px rgba(8, 16, 38, .95), 0 0 14px rgba(8, 16, 38, .7);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; }
@@ -34,11 +35,11 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
 .side {
   position: fixed; top: 0; bottom: 0; left: 0; width: var(--side); padding: 18px 28px 22px;
   border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px;
-  background: linear-gradient(to right, rgba(14, 26, 54, .35), transparent);
+  background: rgba(12, 22, 48, .62); backdrop-filter: blur(10px);
   -webkit-app-region: drag;
 }
 .side > * { -webkit-app-region: no-drag; }
-.brand { font: 22px var(--serif); margin-bottom: 34px; -webkit-app-region: drag; }
+.brand { width: 44px; height: 44px; image-rendering: pixelated; margin-bottom: 26px; align-self: flex-start; -webkit-app-region: drag; filter: drop-shadow(0 2px 6px rgba(8, 16, 38, .6)); }
 #instances { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
 #instances button {
   width: 100%; text-align: left; padding: 9px 0; border-bottom: 1px solid rgba(238, 241, 248, .1); display: block;
@@ -47,8 +48,12 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
 #instances .v { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 #instances button:hover .n, #instances .on .n { color: var(--warm); }
 #instances .on .n::before { content: '▸ '; }
-.account { text-align: left; border-top: 1px solid var(--line); padding-top: 14px; display: grid; }
+.side .link { align-self: flex-start; }
+.account { text-align: left; margin-top: 14px; display: grid; }
 .account #accountName { font: 18px var(--serif); }
+.account .who { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+#accountHead { width: 24px; height: 24px; image-rendering: pixelated; box-shadow: 0 1px 4px rgba(8, 16, 38, .7); }
+#accountHead[hidden] { display: none; }
 .account:hover #accountName { color: var(--warm); }
 
 /* top bar (window controls live in the right 140px) */
@@ -56,7 +61,7 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
   position: fixed; top: 0; left: var(--side); right: 0; height: var(--top); padding-right: 150px;
   display: flex; justify-content: flex-end; align-items: center; gap: 18px; -webkit-app-region: drag;
 }
-.icon { -webkit-app-region: no-drag; opacity: .8; display: grid; }
+.icon { -webkit-app-region: no-drag; opacity: .9; display: grid; filter: drop-shadow(0 1px 2px rgba(8, 16, 38, .95)); }
 .icon[hidden] { display: none; }
 .icon:hover { opacity: 1; color: var(--warm); }
 .icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -65,9 +70,9 @@ button { background: none; border: 0; cursor: pointer; padding: 0; }
 main { position: fixed; top: var(--top); bottom: 0; left: var(--side); right: 0; padding: 4vh 6vw 28px 50px; overflow: hidden; }
 #view { height: 100%; display: flex; flex-direction: column; }
 #view[hidden] { display: none; }
-main .meta, .tabs, .side .label, #instances .v { text-shadow: 0 1px 2px rgba(10, 20, 45, .9), 0 0 12px rgba(10, 20, 45, .6); }
-h1 { font: 400 clamp(56px, 8vw, 112px)/1 var(--serif); margin: 0 0 18px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 30px rgba(10, 20, 45, .35); }
-.rule { height: 1px; background: var(--line); }
+main .meta, .tabs, .tagline, main h1 { text-shadow: var(--shade); }
+h1 { font: 400 clamp(56px, 8vw, 112px)/1 var(--serif); margin: 0 0 18px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rule { height: 1px; background: rgba(238, 241, 248, .55); box-shadow: 0 1px 2px rgba(8, 16, 38, .6); }
 .meta { display: flex; justify-content: space-between; align-items: center; margin: 12px 0 0; color: var(--ink); }
 .actions { display: flex; gap: 22px; align-items: center; margin-left: auto; }
 .link { padding-bottom: 3px; border-bottom: 1px solid var(--line); }
@@ -77,7 +82,7 @@ h1 { font: 400 clamp(56px, 8vw, 112px)/1 var(--serif); margin: 0 0 18px; letter-
 .link:disabled { opacity: .45; cursor: default; }
 .hero { position: absolute; bottom: 9vh; left: 50px; right: 6vw; }
 .tagline { font: italic 34px/1.2 var(--serif); margin-top: 48px; }
-.hero .meta { color: var(--dim); }
+
 
 .progress { height: 2px; margin-top: 10px; background: rgba(238, 241, 248, .12); }
 .progress div { height: 100%; width: 0; background: var(--warm); transition: width .2s; }
@@ -255,6 +260,51 @@ input[type=file] { padding: 6px; font-size: 12px; }
 #importPick { margin-right: auto; }
 .progress { position: relative; }
 .progress .label { position: absolute; right: 0; top: 6px; font-size: 10px; }
+
+.setRow { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* ---------- motion ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes fade { from { opacity: 0; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } }
+@keyframes grow { from { transform: scaleX(0); } }
+@keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+
+/* entrance: sidebar, top bar, hero/instance header; panels re-run it whenever they're unhidden */
+.side > * { animation: slideIn .6s cubic-bezier(.2, .7, .2, 1) backwards; }
+.side > :nth-child(2) { animation-delay: .08s; }
+.side > :nth-child(3) { animation-delay: .14s; }
+.side > :nth-child(4) { animation-delay: .2s; }
+.side > :nth-child(5) { animation-delay: .26s; }
+.brand { animation: fade .8s backwards !important; }
+.top .icon { animation: fade .8s .3s backwards; }
+.hero > *, #view > h1, #view > .meta, #view > .tabs { animation: rise .8s cubic-bezier(.2, .7, .2, 1) backwards; }
+.hero > .meta, #view > .meta { animation-delay: .25s; }
+.hero > .tagline, #view > .tabs { animation-delay: .4s; }
+.rule { transform-origin: left; animation: grow 1s .15s cubic-bezier(.2, .7, .2, 1) backwards; }
+.panel { animation: rise .45s cubic-bezier(.2, .7, .2, 1) backwards; }
+#instances li { animation: slideIn .5s cubic-bezier(.2, .7, .2, 1) backwards; }
+#instances li:nth-child(2) { animation-delay: .05s; } #instances li:nth-child(3) { animation-delay: .1s; }
+#instances li:nth-child(4) { animation-delay: .15s; } #instances li:nth-child(n+5) { animation-delay: .2s; }
+.list li, .cards li, .worlds li, .shots .shot { animation: fade .35s backwards; }
+dialog[open] { animation: pop .28s cubic-bezier(.2, .7, .2, 1); }
+dialog[open]::backdrop { animation: fade .28s; }
+.toast:not([hidden]) { animation: rise .3s cubic-bezier(.2, .7, .2, 1); }
+
+/* hover feedback */
+.link, .icon, .tabs button, #instances .n, #instances button, .account #accountName, .cards li, .shots .shot, .list li, .worlds li {
+  transition: color .2s, border-color .2s, opacity .2s, transform .2s, background-color .2s;
+}
+.link:not(:disabled):hover { transform: translateY(-1px); }
+#instances button:hover { transform: translateX(4px); }
+.icon:hover { transform: translateY(-1px); }
+#settingsBtn svg { transition: transform .6s cubic-bezier(.2, .7, .2, 1); }
+#settingsBtn:hover svg { transform: rotate(90deg); }
+.cards li:hover, .shots .shot:hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, ::backdrop { animation: none !important; transition: none !important; }
+}
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(238, 241, 248, .2); }
