@@ -586,7 +586,29 @@ h('mr:updateAll', async id => {
 
 // ---------- settings & accounts ----------
 // strip secrets before sending config to the renderer: account tokens and the Localts API key
-const publicCfg = () => { const { localtsKey, ...c } = cfg(); return { ...c, hasLocalts: !!localtsKey, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
+// custom background: a copy lives in the data folder so the original can move; ?v= busts the cache on change
+const bgUrl = c => {
+  const f = c.background && path.join(DATA, path.basename(c.background));
+  return f && fs.existsSync(f) ? `${require('url').pathToFileURL(f)}?v=${fs.statSync(f).mtimeMs}` : '';
+};
+const publicCfg = () => { const { localtsKey, ...c } = cfg(); return { ...c, bgUrl: bgUrl(c), hasLocalts: !!localtsKey, accounts: c.accounts.map(({ refresh, token, ...a }) => a) }; };
+h('bg:pick', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Choose a background', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }] });
+  if (r.canceled) return publicCfg();
+  const c = cfg(), name = 'background' + path.extname(r.filePaths[0]).toLowerCase();
+  if (c.background) fs.rmSync(path.join(DATA, path.basename(c.background)), { force: true });
+  fs.copyFileSync(r.filePaths[0], path.join(DATA, name));
+  c.background = name;
+  writeJSON(CFG, c);
+  return publicCfg();
+});
+h('bg:clear', () => {
+  const c = cfg();
+  if (c.background) fs.rmSync(path.join(DATA, path.basename(c.background)), { force: true });
+  c.background = '';
+  writeJSON(CFG, c);
+  return publicCfg();
+});
 h('cfg:get', publicCfg);
 h('cfg:set', patch => {
   const c = cfg();

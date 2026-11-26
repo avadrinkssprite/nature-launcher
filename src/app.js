@@ -375,7 +375,16 @@ $('#dlgSettings').onclose = async () => {
   toast('Settings saved');
 };
 // show the Orders/Shop buttons only when a Localts key is set
-function applyCfg() { $('#ltsBtn').hidden = $('#shopBtn').hidden = !state.cfg.hasLocalts; }
+function applyCfg() {
+  $('#ltsBtn').hidden = $('#shopBtn').hidden = !state.cfg.hasLocalts;
+  // a custom background replaces the pixel ocean (bg.js stops drawing while the canvas is hidden)
+  const url = state.cfg.bgUrl;
+  if (url && $('#bgImg').getAttribute('src') !== url) $('#bgImg').src = url;
+  $('#bgImg').hidden = !url; $('#bg').hidden = !!url;
+  $('#bgClear').hidden = !url;
+}
+$('#bgPick').onclick = async () => { state.cfg = await act('bg:pick'); applyCfg(); };
+$('#bgClear').onclick = async () => { state.cfg = await act('bg:clear'); applyCfg(); $('#bgImg').removeAttribute('src'); };
 // Localts logo urls can be relative to the site
 const ltsLogo = u => !u ? '' : /^http/.test(u) ? u : 'https://localts.store' + (u.startsWith('/') ? '' : '/') + u;
 
