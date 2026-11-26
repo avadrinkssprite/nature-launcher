@@ -40,6 +40,25 @@ $('#instances').onclick = e => {
   loadInstances(b.dataset.id);
 };
 
+// ---------- right-click menu ----------
+const ctx = $('#ctxMenu');
+async function openCtx(e, id) {
+  e.preventDefault();
+  if (id && id !== state.current) { $('#mrList').innerHTML = ''; await loadInstances(id); }
+  ctx.hidden = false;
+  const r = ctx.getBoundingClientRect(); // keep it on screen
+  ctx.style.left = Math.min(e.clientX, innerWidth - r.width - 8) + 'px';
+  ctx.style.top = Math.min(e.clientY, innerHeight - r.height - 8) + 'px';
+}
+$('#instances').oncontextmenu = e => { const b = e.target.closest('button[data-id]'); if (b) openCtx(e, b.dataset.id); };
+$('#instName').oncontextmenu = e => openCtx(e);
+const closeCtx = () => { ctx.hidden = true; };
+addEventListener('click', closeCtx); // also runs after a menu item's own handler
+addEventListener('blur', closeCtx);
+addEventListener('resize', closeCtx);
+addEventListener('keydown', e => { if (e.key === 'Escape') closeCtx(); });
+document.addEventListener('contextmenu', e => { if (!e.target.closest('#instances button[data-id], #instName')) closeCtx(); });
+
 function renderInstance() {
   const i = cur();
   $('#empty').hidden = !!i; $('#view').hidden = !i;

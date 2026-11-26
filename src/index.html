@@ -56,9 +56,6 @@
         <span id="instMeta"></span>
         <span class="actions">
           <button class="link" id="instRename">Rename</button>
-          <button class="link" id="instArgs">Launch args</button>
-          <button class="link" id="instVersion" hidden>Version files</button>
-          <button class="link" id="instFolder">Folder</button>
           <button class="link danger" id="instDelete">Delete</button>
           <button class="link launch" id="launchBtn">Launch →</button>
         </span>
@@ -251,6 +248,13 @@
       <div class="row"><button value="cancel" formnovalidate class="link">Cancel</button><button value="ok" class="link launch">Save</button></div>
     </form>
   </dialog>
+
+  <!-- right-click menu for the instance name (sidebar entry or the big title) -->
+  <div id="ctxMenu" class="ctx" role="menu" hidden>
+    <button role="menuitem" id="instArgs">Launch args</button>
+    <button role="menuitem" id="instVersion" hidden>Version files</button>
+    <button role="menuitem" id="instFolder">Folder</button>
+  </div>
 
   <dialog id="dlgImport">
     <form method="dialog" id="formImport">

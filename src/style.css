@@ -211,6 +211,15 @@ select option { background: #172b55; }
 
 #log { margin: 0; padding: 14px 18px; overflow: auto; flex: 1; font: 11.5px/1.5 Consolas, monospace; color: #d7deef; white-space: pre-wrap; word-break: break-all; }
 
+.ctx {
+  position: fixed; z-index: 20; min-width: 160px; padding: 4px 0; display: grid;
+  background: rgba(14, 26, 54, .92); border: 1px solid var(--line); backdrop-filter: blur(8px); box-shadow: 0 8px 24px rgba(8, 14, 30, .5);
+}
+.ctx[hidden] { display: none; }
+.ctx button { background: none; border: 0; color: var(--ink); text-align: left; padding: 8px 16px; font: inherit; font-size: 13px; cursor: pointer; }
+.ctx button:hover, .ctx button:focus-visible { background: var(--glass-hi); color: var(--warm); outline: none; }
+.ctx button[hidden] { display: none; }
+
 .toast {
   position: fixed; bottom: 22px; right: 26px; max-width: 420px; padding: 12px 16px; z-index: 10;
   background: rgba(14, 26, 54, .92); border: 1px solid var(--line); border-left: 2px solid var(--warm);
